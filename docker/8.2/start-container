@@ -1,0 +1,64 @@
+#!/bin/sh
+
+set -e
+
+echo "===================================="
+echo " Laravel PHP 8.2 Container"
+echo "===================================="
+
+cd /var/www/html
+
+# =========================================================
+# Pastikan direktori Laravel tersedia
+# =========================================================
+echo "Checking Laravel directories..."
+
+mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache \
+    database
+
+# =========================================================
+# Install Composer dependency jika belum ada
+# =========================================================
+if [ ! -f vendor/autoload.php ]; then
+    echo "Installing Composer dependencies..."
+
+    composer install \
+        --no-interaction \
+        --prefer-dist \
+        --optimize-autoloader
+fi
+
+# =========================================================
+# Laravel permission
+# =========================================================
+echo "Setting Laravel permissions..."
+
+chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
+
+# =========================================================
+# Clear Laravel cache
+# =========================================================
+if [ -f artisan ]; then
+    echo "Clearing Laravel cache..."
+
+    php artisan optimize:clear || true
+
+    echo "Creating storage link..."
+
+    php artisan storage:link || true
+fi
+
+# =========================================================
+# Start Supervisor
+# =========================================================
+echo "Starting Supervisor..."
+
+exec /usr/bin/supervisord \
+    -c /etc/supervisor/conf.d/supervisord.conf \
+    -n

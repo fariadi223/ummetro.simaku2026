@@ -1,0 +1,550 @@
+{
+  "menu": [
+    {
+      "url": "admin",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "admin.index",
+      "role": [
+        "admin"
+      ]
+    },
+    {
+      "name": "Master Data",
+      "icon": "menu-icon tf-icons ti ti-database",
+      "slug": [
+        "admin.unit",
+        "admin.user",
+        "admin.coa",
+        "admin.mak",
+        "admin.sumberdana",
+        "admin.biaya"
+      ],
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "admin/unit",
+          "name": "Unit Kerja",
+          "icon": "menu-icon tf-icons ti ti-building-community",
+          "slug": "admin.unit",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/user",
+          "name": "Pengguna",
+          "icon": "menu-icon tf-icons ti ti-users",
+          "slug": "admin.user",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/coa",
+          "name": "Chart of Accounts",
+          "icon": "menu-icon tf-icons ti ti-list-tree",
+          "slug": "admin.coa",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/mak",
+          "name": "Mata Anggaran",
+          "icon": "menu-icon tf-icons ti ti-sitemap",
+          "slug": "admin.mak",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/sumberdana",
+          "name": "Sumber Dana",
+          "icon": "menu-icon tf-icons ti ti-building-bank",
+          "slug": "admin.sumberdana",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/biaya",
+          "name": "Master Biaya",
+          "icon": "menu-icon tf-icons ti ti-receipt-2",
+          "slug": "admin.biaya",
+          "role": [
+            "admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Setting",
+      "icon": "menu-icon tf-icons ti ti-settings",
+      "slug": [
+        "admin.periode",
+        "admin.pagu",
+        "admin.review"
+      ],
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "admin/periode",
+          "name": "Periode",
+          "icon": "menu-icon tf-icons ti ti-calendar-cog",
+          "slug": "admin.periode",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/pagu",
+          "name": "Pagu",
+          "icon": "menu-icon tf-icons ti ti-moneybag",
+          "slug": "admin.pagu",
+          "role": [
+            "admin"
+          ]
+        },
+        {
+          "url": "admin/review",
+          "name": "Penetapan Review",
+          "icon": "menu-icon tf-icons ti ti-user-check",
+          "slug": "admin.review",
+          "role": [
+            "admin"
+          ]
+        }
+      ]
+    },
+    {
+      "url": "akuntansi",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "akuntansi.index",
+      "role": [
+        "akuntansi"
+      ]
+    },
+    {
+      "name": "Akuntansi Anggaran",
+      "icon": "menu-icon tf-icons ti ti-report-money",
+      "slug": [
+        "akuntansi.penyetoran",
+        "akuntansi.pencairan",
+        "akuntansi.realisasi"
+      ],
+      "role": [
+        "akuntansi"
+      ],
+      "submenu": [
+        {
+          "url": "akuntansi/penyetoran",
+          "name": "Penyetoran Kas Unit",
+          "icon": "menu-icon tf-icons ti ti-building-bank",
+          "slug": "akuntansi.penyetoran",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/pencairan",
+          "name": "Pencairan Anggaran",
+          "icon": "menu-icon tf-icons ti ti-transfer-in",
+          "slug": "akuntansi.pencairan",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/realisasi",
+          "name": "Realisasi Anggaran",
+          "icon": "menu-icon tf-icons ti ti-chart-bar",
+          "slug": "akuntansi.realisasi",
+          "role": [
+            "akuntansi"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kertas Kerja",
+      "icon": "menu-icon tf-icons ti ti-book",
+      "slug": [
+        "akuntansi.jurnal-umum",
+        "akuntansi.jurnal-bkk",
+        "akuntansi.saldo-unit",
+        "akuntansi.saldo-awal"
+      ],
+      "role": [
+        "akuntansi"
+      ],
+      "submenu": [
+        {
+          "url": "akuntansi/jurnal-umum",
+          "name": "Jurnal Umum",
+          "icon": "menu-icon tf-icons ti ti-notes",
+          "slug": "akuntansi.jurnal-umum",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/jurnal-bkk",
+          "name": "Jurnal Non Anggaran",
+          "icon": "menu-icon tf-icons ti ti-receipt-2",
+          "slug": "akuntansi.jurnal-bkk",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/saldo-unit",
+          "name": "Saldo Anggaran Unit",
+          "icon": "menu-icon tf-icons ti ti-wallet",
+          "slug": "akuntansi.saldo-unit",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/saldo-awal",
+          "name": "Saldo Awal",
+          "icon": "menu-icon tf-icons ti ti-scale",
+          "slug": "akuntansi.saldo-awal",
+          "role": [
+            "akuntansi"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Laporan Keuangan",
+      "icon": "menu-icon tf-icons ti ti-report-analytics",
+      "slug": [
+        "akuntansi.posisi-keuangan",
+        "akuntansi.penghasilan-komprehensif",
+        "akuntansi.perubahan-aset-neto",
+        "akuntansi.arus-kas",
+        "akuntansi.buku-besar",
+        "akuntansi.neraca-percobaan"
+      ],
+      "role": [
+        "akuntansi"
+      ],
+      "submenu": [
+        {
+          "url": "akuntansi/posisi-keuangan",
+          "name": "Posisi Keuangan",
+          "icon": "menu-icon tf-icons ti ti-building-bank",
+          "slug": "akuntansi.posisi-keuangan",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/penghasilan-komprehensif",
+          "name": "Penghasilan Komprehensif",
+          "icon": "menu-icon tf-icons ti ti-chart-line",
+          "slug": "akuntansi.penghasilan-komprehensif",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/perubahan-aset-neto",
+          "name": "Perubahan Aset Neto",
+          "icon": "menu-icon tf-icons ti ti-chart-arrows-vertical",
+          "slug": "akuntansi.perubahan-aset-neto",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/arus-kas",
+          "name": "Arus Kas",
+          "icon": "menu-icon tf-icons ti ti-arrows-exchange",
+          "slug": "akuntansi.arus-kas",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/buku-besar",
+          "name": "Buku Besar",
+          "icon": "menu-icon tf-icons ti ti-book-2",
+          "slug": "akuntansi.buku-besar",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/neraca-percobaan",
+          "name": "Neraca Percobaan",
+          "icon": "menu-icon tf-icons ti ti-scale",
+          "slug": "akuntansi.neraca-percobaan",
+          "role": [
+            "akuntansi"
+          ]
+        }
+      ]
+    },
+    {
+      "url": "akuntansi/periode",
+      "name": "Periode Anggaran",
+      "icon": "menu-icon tf-icons ti ti-calendar",
+      "slug": "akuntansi.periode",
+      "role": [
+        "akuntansi"
+      ]
+    },
+    {
+      "url": "penerimaan",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "penerimaan.index",
+      "role": [
+        "penerimaan"
+      ]
+    },
+    {
+      "url": "kasir",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "kasir.index",
+      "role": [
+        "kasir"
+      ]
+    },
+    {
+      "url": "kasir/spm",
+      "name": "Realisasi SPM",
+      "icon": "menu-icon tf-icons ti ti-cash-banknote",
+      "slug": "kasir.spm",
+      "role": [
+        "kasir"
+      ]
+    },
+    {
+      "url": "kasir/non-anggaran/input",
+      "name": "Input Non Anggaran",
+      "icon": "menu-icon tf-icons ti ti-receipt-2",
+      "slug": "kasir.non-anggaran",
+      "role": [
+        "kasir"
+      ]
+    },
+    {
+      "url": "kasir/periode",
+      "name": "Periode Anggaran",
+      "icon": "menu-icon tf-icons ti ti-calendar",
+      "slug": "kasir.periode",
+      "role": [
+        "kasir"
+      ]
+    },
+    {
+      "url": "penggajian",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "penggajian.index",
+      "role": [
+        "op1",
+        "op2"
+      ]
+    },
+    {
+      "url": "reviewer",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "reviewer.index",
+      "role": [
+        "review"
+      ]
+    },
+    {
+      "url": "adminspm",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "adminspm.index",
+      "role": [
+        "operatorspm"
+      ]
+    },
+    {
+      "url": "adminspm/verifikasi",
+      "name": "Verifikasi SPP",
+      "icon": "menu-icon tf-icons ti ti-file-search",
+      "slug": "adminspm.verifikasi",
+      "role": [
+        "operatorspm"
+      ]
+    },
+    {
+      "url": "adminspm/spm",
+      "name": "Daftar SPM",
+      "icon": "menu-icon tf-icons ti ti-file-check",
+      "slug": "adminspm.spm",
+      "role": [
+        "operatorspm"
+      ]
+    },
+    {
+      "url": "dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "dashboard.index",
+      "role": [
+        "otorisator1",
+        "otorisator2"
+      ]
+    },
+    {
+      "url": "dashboard/otorisasi-spm",
+      "name": "Otorisasi SPM",
+      "icon": "menu-icon tf-icons ti ti-signature",
+      "slug": "otorisator.spm",
+      "role": [
+        "otorisator1",
+        "otorisator2"
+      ]
+    },
+    {
+      "url": "dashboard/spm",
+      "name": "Daftar SPM",
+      "icon": "menu-icon tf-icons ti ti-file-check",
+      "slug": "otorisator.daftar-spm",
+      "role": [
+        "otorisator1",
+        "otorisator2"
+      ]
+    },
+    {
+      "url": "adminfakultas",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": "adminfakultas.index",
+      "role": [
+        "operator"
+      ]
+    },
+    {
+      "url": "unit",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "slug": [
+        "unit.index",
+        "adminunit.index"
+      ],
+      "role": [
+        "unit"
+      ]
+    },
+    {
+      "name": "Pengaturan",
+      "icon": "menu-icon tf-icons ti ti-settings",
+      "slug": [
+        "unit.profil",
+        "unit.periode",
+        "unit.kegiatan"
+      ],
+      "role": [
+        "unit"
+      ],
+      "submenu": [
+        {
+          "url": "unit/profil",
+          "name": "Visi & Misi",
+          "icon": "menu-icon tf-icons ti ti-file-description",
+          "slug": "unit.profil",
+          "role": [
+            "unit"
+          ],
+          "sembunyiAdminUnit": true
+        },
+        {
+          "url": "unit/kegiatan",
+          "name": "Proses Bisnis - Kegiatan",
+          "icon": "menu-icon tf-icons ti ti-list-check",
+          "slug": "unit.kegiatan",
+          "role": [
+            "unit"
+          ],
+          "sembunyiAdminUnit": true
+        },
+        {
+          "url": "unit/periode",
+          "name": "Periode Anggaran",
+          "icon": "menu-icon tf-icons ti ti-calendar",
+          "slug": "unit.periode",
+          "role": [
+            "unit"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Keluaran",
+      "icon": "menu-icon tf-icons ti ti-report-analytics",
+      "slug": [
+        "unit.keluaran"
+      ],
+      "role": [
+        "unit"
+      ],
+      "submenu": [
+        {
+          "url": "unit/keluaran/informasi-pagu",
+          "name": "Informasi Pagu",
+          "icon": "menu-icon tf-icons ti ti-wallet",
+          "slug": "unit.keluaran.pagu",
+          "role": [
+            "unit"
+          ]
+        },
+        {
+          "url": "unit/keluaran/rekap-fungsi",
+          "name": "Rekap Berbasis Fungsi",
+          "icon": "menu-icon tf-icons ti ti-sitemap",
+          "slug": "unit.keluaran.fungsi",
+          "role": [
+            "unit"
+          ]
+        },
+        {
+          "url": "unit/keluaran/rekap-sifat",
+          "name": "Rekap Berbasis Sifat",
+          "icon": "menu-icon tf-icons ti ti-category",
+          "slug": "unit.keluaran.sifat",
+          "role": [
+            "unit"
+          ]
+        }
+      ]
+    },
+    {
+      "url": "unit/spp",
+      "name": "Pengajuan SPP",
+      "icon": "menu-icon tf-icons ti ti-send",
+      "slug": "unit.spp",
+      "role": [
+        "unit"
+      ],
+      "sembunyiAdminUnit": true
+    },
+    {
+      "url": "unit/otorisasi-spp",
+      "name": "Otorisasi SPP",
+      "icon": "menu-icon tf-icons ti ti-signature",
+      "slug": "unit.otorisasi",
+      "role": [
+        "unit"
+      ],
+      "hanyaAdminUnit": true
+    }
+  ]
+}

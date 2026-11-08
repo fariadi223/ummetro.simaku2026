@@ -1,0 +1,41 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/8.2/Dockerfile
+
+    container_name: simaku-app
+    restart: unless-stopped
+
+    working_dir: /var/www/html
+
+    environment:
+      TZ: Asia/Jakarta
+
+    volumes:
+      - ./:/var/www/html
+
+    networks:
+      - npm_manager_npm-internal
+
+
+  nginx:
+    image: nginx:alpine
+    container_name: simaku-nginx
+    restart: unless-stopped
+
+    depends_on:
+      - app
+
+    volumes:
+      - ./:/var/www/html:ro
+      - ./nginx:/etc/nginx/conf.d:ro
+
+    networks:
+      - npm_manager_npm-internal
+
+
+networks:
+  npm_manager_npm-internal:
+    external: true

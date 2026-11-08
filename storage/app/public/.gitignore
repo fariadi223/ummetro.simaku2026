@@ -1,0 +1,8 @@
+*
+!.gitignore
+!image/
+!image/.gitkeep
+!images/
+!images/.gitkeep
+!siuk/
+!siuk/.gitkeep

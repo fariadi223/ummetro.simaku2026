@@ -1,0 +1,150 @@
+/*
+ * Style bersama SIMAKU v2 (di luar build mix, tidak tertimpa `npm run`).
+ */
+
+/* ---------------------------------------------------------------------------
+ * Header halaman bergradasi
+ *   <div class="pg-header"> ... </div>
+ * ------------------------------------------------------------------------- */
+.pg-header {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, .2), transparent 40%),
+    linear-gradient(135deg, rgba(var(--bs-primary-rgb), 1) 0%, #5a4fd6 55%, #4338b8 100%);
+  box-shadow: 0 18px 40px -20px rgba(var(--bs-primary-rgb), .7);
+}
+
+/* Lingkaran dekoratif di pojok kanan bawah */
+.pg-header::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -90px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 28px solid rgba(255, 255, 255, .06);
+  pointer-events: none;
+}
+
+.pg-header > * { position: relative; z-index: 1; }
+
+.pg-header h1, .pg-header h2, .pg-header h3,
+.pg-header h4, .pg-header h5, .pg-header h6 { color: #fff; }
+
+.pg-header-sub { color: rgba(255, 255, 255, .78); }
+
+/* Kotak ikon "kaca" */
+.pg-header-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 1.6rem;
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .25);
+  backdrop-filter: blur(4px);
+}
+
+/* Lencana ringkasan, mis. total data */
+.pg-header-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem .8rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .22);
+}
+.pg-header-chip strong { color: #fff; font-size: .95rem; }
+
+/* Filter berbentuk chip (bentuk sama dengan .pg-header-chip, untuk di dalam kartu).
+   <div class="filter-chips"><a class="filter-chip active"><i class="ti ..."></i><span>Label</span><strong>3</strong></a></div> */
+.filter-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .8rem .85rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bs-body-color);
+  background: rgba(var(--bs-secondary-rgb), .08);
+  border: 1px solid rgba(var(--bs-secondary-rgb), .16);
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.filter-chip i { font-size: 1rem; opacity: .8; }
+.filter-chip strong {
+  min-width: 1.4rem; padding: 0 .4rem; border-radius: 999px; text-align: center;
+  font-size: .78rem; font-weight: 700; background: rgba(var(--bs-secondary-rgb), .14); color: var(--bs-heading-color);
+}
+.filter-chip:hover { color: var(--bs-primary); background: rgba(var(--bs-primary-rgb), .08); border-color: rgba(var(--bs-primary-rgb), .3); }
+.filter-chip:focus-visible { outline: 2px solid rgba(var(--bs-primary-rgb), .5); outline-offset: 2px; }
+.filter-chip.active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 1), #5a4fd6);
+  border-color: transparent;
+  box-shadow: 0 6px 14px -6px rgba(var(--bs-primary-rgb), .7);
+}
+.filter-chip.active i { opacity: 1; }
+.filter-chip.active strong { background: rgba(255, 255, 255, .22); color: #fff; }
+
+@media (max-width: 575.98px) {
+  .pg-header { padding: 20px; border-radius: 14px; }
+}
+
+/* Paginasi seragam: semua tombol lingkaran 34px dengan jarak sama (lihat _partials/pagination).
+   Menimpa ukuran berbeda dari .page-item.first/.prev/.next/.last bawaan tema. */
+.pagination-simaku { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.pagination-simaku .page-item { margin: 0 !important; }
+.pagination-simaku .page-item .page-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 34px; padding: 0 .55rem; margin: 0 !important;
+  border-radius: 999px !important; border: 1px solid transparent;
+  font-size: .85rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums;
+  color: var(--bs-body-color); background: rgba(var(--bs-secondary-rgb), .1);
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.pagination-simaku .page-item .page-link i { font-size: 1rem; }
+.pagination-simaku .page-item:not(.active):not(.disabled) .page-link:hover {
+  color: var(--bs-primary); background: rgba(var(--bs-primary-rgb), .12);
+}
+.pagination-simaku .page-item .page-link:focus-visible { outline: 2px solid rgba(var(--bs-primary-rgb), .5); outline-offset: 2px; box-shadow: none; }
+.pagination-simaku .page-item.active .page-link {
+  color: #fff; background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 1), #5a4fd6);
+  box-shadow: 0 6px 14px -6px rgba(var(--bs-primary-rgb), .7);
+}
+.pagination-simaku .page-item.disabled .page-link { opacity: .45; background: rgba(var(--bs-secondary-rgb), .06); }
+/* Tombol first/last sedikit dipisah dari prev/next */
+.pagination-simaku .page-item.prev { margin-right: .25rem !important; }
+.pagination-simaku .page-item.next { margin-left: .25rem !important; }
+
+/* Tombol panah persis lingkaran 34px (tema memberi padding ekstra pada first/prev/next/last). */
+.pagination-simaku .page-item.first .page-link,
+.pagination-simaku .page-item.prev .page-link,
+.pagination-simaku .page-item.next .page-link,
+.pagination-simaku .page-item.last .page-link { width: 34px; min-width: 34px; padding: 0 !important; }
+
+/* Baris chip yang bisa digulir mendatar (mis. tab unit di halaman rekap). */
+.filter-chips-gulir { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .35rem; scrollbar-width: thin; }
+.filter-chips-gulir .filter-chip { flex-shrink: 0; white-space: nowrap; }
+
+/* Menu horizontal: nama submenu yang panjang (mis. "Penghasilan Komprehensif") tetap satu baris;
+   lebar dropdown mengikuti teks terpanjang (tema: lebar tetap 15.625rem sehingga teks terlipat). */
+.menu-horizontal .menu-inner > .menu-item > .menu-sub {
+  width: auto;
+  min-width: 15.625rem;
+}
+.menu-horizontal .menu-sub .menu-link > div {
+  white-space: nowrap;
+}

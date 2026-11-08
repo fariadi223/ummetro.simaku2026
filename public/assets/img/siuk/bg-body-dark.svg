@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f2236"/>
+      <stop offset="1" stop-color="#171929"/>
+    </linearGradient>
+    <linearGradient id="w1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7367f0" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#00bad1" stop-opacity=".12"/>
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#7367f0" fill-opacity=".12"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <rect width="1600" height="900" fill="url(#dots)"/>
+  <path d="M0 650 C300 560 500 760 820 690 S1380 560 1600 640 V900 H0Z" fill="url(#w1)"/>
+  <path d="M0 740 C320 680 560 830 900 770 S1400 690 1600 750 V900 H0Z" fill="url(#w1)" opacity=".7"/>
+  <circle cx="1450" cy="130" r="260" fill="#7367f0" fill-opacity=".07"/>
+  <circle cx="120" cy="80" r="200" fill="#00bad1" fill-opacity=".06"/>
+</svg>
