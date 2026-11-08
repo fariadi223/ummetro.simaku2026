@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: docker/8.2/Dockerfile
 
-    container_name: simaku-app
+    container_name: simakuumm-app
     restart: unless-stopped
 
     working_dir: /var/www/html
@@ -17,12 +17,12 @@ services:
       - ./:/var/www/html
 
     networks:
-      - npm_manager_npm-internal
+      - proxy-manager
 
 
   nginx:
     image: nginx:alpine
-    container_name: simaku-nginx
+    container_name: simakuumm-nginx
     restart: unless-stopped
 
     depends_on:
@@ -33,9 +33,9 @@ services:
       - ./nginx:/etc/nginx/conf.d:ro
 
     networks:
-      - npm_manager_npm-internal
+      - proxy-manager
 
 
 networks:
-  npm_manager_npm-internal:
+  proxy-manager:
     external: true
