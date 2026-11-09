@@ -147,6 +147,7 @@ Route::middleware(['auth', 'role:unit'])
       Route::get('/', [OtorisasiSppController::class, 'index'])->name('index');
       Route::get('{id}', [OtorisasiSppController::class, 'show'])->name('show');
       Route::get('{id}/cetak', [OtorisasiSppController::class, 'cetak'])->name('cetak');
+      Route::get('spm/{id}/cetak', [OtorisasiSppController::class, 'cetakSpm'])->name('spm.cetak');
       Route::post('{id}/setujui', [OtorisasiSppController::class, 'setujui'])->name('setujui');
       Route::post('{id}/tolak', [OtorisasiSppController::class, 'tolak'])->name('tolak');
     })->whereNumber('id');
@@ -355,6 +356,7 @@ Route::middleware(['auth', 'role:admin'])
       Route::get('/', [PeriodeController::class, 'index'])->name('index');
       Route::post('pilih', [PeriodeController::class, 'pilih'])->name('pilih');
       Route::put('{info}/jadwal', [PeriodeController::class, 'jadwal'])->whereNumber('info')->name('jadwal');
+      Route::put('{info}/jurnal', [PeriodeController::class, 'jurnal'])->whereNumber('info')->name('jurnal');
     });
 
     // Setting > Pagu (ueu_tbl_pagu, ueu_tbl_pagu_unit)

@@ -13,6 +13,7 @@ use App\Services\SppAnggaran;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -266,23 +267,7 @@ class DashboardController extends Controller
     $lpj = DB::table('ueu_tbl_lpj')->where('tahun', $th)->where('status_lpj', 'Belum diverifikasi')
       ->selectRaw('COUNT(*) as n, COALESCE(SUM(ajuan), 0) as nominal')->first();
 
-    $jurnal = DB::table('ueu_tbl_jurnal_spm')->where('tahun', $th)
-      ->selectRaw('COUNT(*) as n, COALESCE(SUM(debet), 0) as debet, COALESCE(SUM(kredit), 0) as kredit, MAX(tgl_trk) as terakhir')->first();
-    $perBulan = DB::table('ueu_tbl_jurnal_spm')->where('tahun', $th)
-      ->selectRaw("DATE_FORMAT(tgl_trk, '%Y-%m') as bln, COUNT(*) as n, SUM(debet) as debet, SUM(kredit) as kredit")
-      ->groupBy('bln')->orderBy('bln')->get();
-    // Saldo kas = saldo akhir di Neraca Percobaan (saldo awal T.A + mutasi tanpa jurnal TB), sama dengan
-    // Laporan Posisi Keuangan & Arus Kas. Kas & setara kas = 1.1.01 Kas, 1.1.02 Bank, 1.1.03 Surat Berharga.
-    $akunKas = app(NeracaPercobaan::class)->hitung($tahun)['baris']->where('lv', 6)
-      ->filter(fn ($r) => in_array(substr($r->kode, 0, 6), ['1.1.01', '1.1.02', '1.1.03'], true));
-    $saldoKas = fn ($cocok) => (float) $akunKas->filter($cocok)->sum('akhir');
-    $kasRingkas = [
-      'univ' => $saldoKas(fn ($r) => $r->id === 569),
-      'unit' => $saldoKas(fn ($r) => $r->id === 570),
-      'bank' => $saldoKas(fn ($r) => !in_array($r->id, [569, 570], true)),
-      'total' => $saldoKas(fn ($r) => true),
-      'awal' => (float) $akunKas->sum('awal'),
-    ];
+    $statistik = $this->statistikJurnal($tahun);
 
     $ringkas = fn ($c, $kolom = 'nominal') => ['n' => $c->count(), 'nominal' => (float) $c->sum($kolom)];
 
@@ -296,12 +281,63 @@ class DashboardController extends Controller
         'bkm' => $ringkas($bkm),
         'lpj' => ['n' => (int) $lpj->n, 'nominal' => (float) $lpj->nominal],
       ],
-      'jurnal' => $jurnal,
-      'perBulan' => $perBulan,
-      'kas' => $kasRingkas,
+      'jurnal' => $statistik['jurnal'],
+      'perBulan' => $statistik['perBulan'],
+      'kas' => $statistik['kas'],
+      'statistikPada' => $statistik['dihitung'],
       'antrianSpm' => $spm->take(8),
       'antrianBkk' => $bkk->take(8),
     ]);
+  }
+
+  /**
+   * Ringkasan jurnal T.A, per bulan, dan saldo kas untuk dashboard akuntansi, di-cache (Redis).
+   *
+   * Tanpa cache, bagian ini menjalankan Neraca Percobaan penuh + dua agregasi atas ueu_tbl_jurnal_spm
+   * (±800 rb baris) setiap kali dashboard dibuka: ±400 ms untuk T.A penuh.
+   *
+   * Kunci cache memuat MAX(id_trans) jurnal & saldo awal (±4 ms lewat indeks PK), sehingga jurnal baru —
+   * dari v2 maupun v1 yang memakai DB yang sama — langsung membuat cache lama tidak terpakai. Perubahan
+   * atau penghapusan baris lama tidak terdeteksi oleh sidik ini; itu dibatasi TTL, dan pengguna bisa
+   * memaksa hitung ulang dengan ?segarkan=1 (tombol di dashboard).
+   *
+   * @return array{jurnal: object, perBulan: Collection, kas: array<string, float>, dihitung: Carbon}
+   */
+  private function statistikJurnal(int $tahun): array
+  {
+    $th = (string) $tahun;
+    $sidik = DB::table('ueu_tbl_jurnal_spm')->max('id_trans') . '-' . DB::table('ueu_tbl_jurnal_saldo')->max('id_trans');
+    $kunci = "dashboard.akuntansi.{$th}.{$sidik}";
+
+    if (request()->boolean('segarkan')) {
+      Cache::forget($kunci);
+    }
+
+    return Cache::remember($kunci, now()->addMinutes(10), function () use ($tahun, $th) {
+      $jurnal = DB::table('ueu_tbl_jurnal_spm')->where('tahun', $th)
+        ->selectRaw('COUNT(*) as n, COALESCE(SUM(debet), 0) as debet, COALESCE(SUM(kredit), 0) as kredit, MAX(tgl_trk) as terakhir')->first();
+      $perBulan = DB::table('ueu_tbl_jurnal_spm')->where('tahun', $th)
+        ->selectRaw("DATE_FORMAT(tgl_trk, '%Y-%m') as bln, COUNT(*) as n, SUM(debet) as debet, SUM(kredit) as kredit")
+        ->groupBy('bln')->orderBy('bln')->get();
+      // Saldo kas = saldo akhir di Neraca Percobaan (saldo awal T.A + mutasi tanpa jurnal TB), sama dengan
+      // Laporan Posisi Keuangan & Arus Kas. Kas & setara kas = 1.1.01 Kas, 1.1.02 Bank, 1.1.03 Surat Berharga.
+      $akunKas = app(NeracaPercobaan::class)->hitung($tahun)['baris']->where('lv', 6)
+        ->filter(fn ($r) => in_array(substr($r->kode, 0, 6), ['1.1.01', '1.1.02', '1.1.03'], true));
+      $saldoKas = fn ($cocok) => (float) $akunKas->filter($cocok)->sum('akhir');
+
+      return [
+        'jurnal' => $jurnal,
+        'perBulan' => $perBulan,
+        'kas' => [
+          'univ' => $saldoKas(fn ($r) => $r->id === 569),
+          'unit' => $saldoKas(fn ($r) => $r->id === 570),
+          'bank' => $saldoKas(fn ($r) => !in_array($r->id, [569, 570], true)),
+          'total' => $saldoKas(fn ($r) => true),
+          'awal' => (float) $akunKas->sum('awal'),
+        ],
+        'dihitung' => now(),
+      ];
+    });
   }
 
   /**

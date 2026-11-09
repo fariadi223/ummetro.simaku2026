@@ -49,6 +49,13 @@
   <div class="card-header">
     <h5 class="mb-0">Jadwal Penganggaran</h5>
     <small class="text-muted">Unit dapat menginput anggaran selama jadwal komite belum berakhir (atau klinik anggaran unit aktif).</small>
+    <small class="d-block text-muted">Penjurnalan selalu dibuka untuk periode berjalan; T.A lain dapat dibuka sementara agar akuntansi bisa menginput jurnal umum & setoran.</small>
+    @unless ($adaJurnalDibuka)
+      <div class="alert alert-warning small py-2 mt-2 mb-0">
+        <i class="ti ti-database-cog ti-xs me-1"></i>Fitur buka penjurnalan di luar periode berjalan belum aktif: jalankan
+        <code>database/sql/2026_11_09_ueu_tbl_info_jurnal_dibuka.sql</code> pada database.
+      </div>
+    @endunless
   </div>
   <div class="table-responsive">
     <table class="table table-hover periode-tabel mb-0">
@@ -78,8 +85,13 @@
             <td>
               <span class="badge {{ $i->aktif === 'enable' ? 'bg-label-success' : 'bg-label-secondary' }}"
                     title="Tahun anggaran berjalan (dipakai saat login)">{{ $i->aktif === 'enable' ? 'Aktif' : 'Tidak aktif' }}</span>
-              <span class="badge {{ $i->penjurnalan === 'open' ? 'bg-label-info' : 'bg-label-secondary' }}"
-                    title="Penjurnalan untuk akuntansi, kasir, dan SPM">Jurnal {{ $i->penjurnalan === 'open' ? 'dibuka' : 'ditutup' }}</span>
+              @if ($i->penjurnalan === 'open')
+                <span class="badge bg-label-info" title="Periode berjalan penjurnalan (akuntansi, kasir, SPM)">Jurnal berjalan</span>
+              @elseif (($i->jurnal_dibuka ?? 'tidak') === 'ya')
+                <span class="badge bg-label-warning" title="Penjurnalan dibuka di luar periode berjalan">Jurnal dibuka</span>
+              @else
+                <span class="badge bg-label-secondary" title="Penjurnalan ditutup">Jurnal ditutup</span>
+              @endif
             </td>
             <td class="text-end text-nowrap">
               @if ($i->th_angg != $periode)
@@ -89,6 +101,24 @@
                   <button type="submit" class="btn btn-sm btn-text-primary" title="Kerjakan T.A ini">
                     <i class="ti ti-player-play ti-xs me-1"></i>Pilih
                   </button>
+                </form>
+              @endif
+              @if ($adaJurnalDibuka && $i->penjurnalan !== 'open')
+                @php $dibuka = ($i->jurnal_dibuka ?? 'tidak') === 'ya'; @endphp
+                <form method="POST" action="{{ route('admin.periode.jurnal', $i) }}" class="d-inline"
+                      onsubmit="return confirm('{{ $dibuka ? 'Tutup' : 'Buka' }} penjurnalan T.A {{ $i->th_angg }}/{{ $i->th_angg + 1 }}?')">
+                  @csrf
+                  @method('PUT')
+                  <input type="hidden" name="dibuka" value="{{ $dibuka ? 0 : 1 }}">
+                  @if ($dibuka)
+                    <button type="submit" class="btn btn-sm btn-text-danger" title="Tutup kembali penjurnalan T.A ini">
+                      <i class="ti ti-lock ti-xs me-1"></i>Tutup jurnal
+                    </button>
+                  @else
+                    <button type="submit" class="btn btn-sm btn-text-success" title="Buka penjurnalan T.A ini di luar periode berjalan">
+                      <i class="ti ti-lock-open ti-xs me-1"></i>Buka jurnal
+                    </button>
+                  @endif
                 </form>
               @endif
               <button type="button" class="btn btn-sm btn-icon btn-text-warning rounded-pill btn-jadwal" title="Ubah jadwal"

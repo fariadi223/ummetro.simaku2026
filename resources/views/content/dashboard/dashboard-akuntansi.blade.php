@@ -125,6 +125,10 @@
       <div class="card-header">
         <h5 class="mb-0">Saldo Kas</h5>
         <small class="text-muted">Per hari ini · saldo awal T.A + mutasi jurnal (sama dengan Laporan Posisi Keuangan)</small>
+        <small class="d-block text-muted mt-1">
+          Dihitung {{ $statistikPada->format('H:i') }}
+          · <a href="{{ request()->fullUrlWithQuery(['segarkan' => 1]) }}" title="Hitung ulang ringkasan jurnal & saldo kas"><i class="ti ti-refresh ti-xs"></i> Segarkan</a>
+        </small>
       </div>
       <div class="card-body d-flex flex-column gap-3">
         @foreach ([['univ', 'Kas Universitas', 'ti-building-bank', 'bg-label-primary'], ['unit', 'Kas di Unit Kerja', 'ti-building', 'bg-label-info'], ['bank', 'Bank & Deposito', 'ti-credit-card', 'bg-label-warning']] as [$k, $label, $ikon, $kelas])

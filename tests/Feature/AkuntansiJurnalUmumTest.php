@@ -80,6 +80,67 @@ class AkuntansiJurnalUmumTest extends TestCase
         $this->assertSame($sebelum, DB::table('ueu_tbl_jurnal_spm')->count());
     }
 
+    /** Periode login 2026 = T.A 2026/2027: 01-09-2026 s/d 31-08-2027. Semua POST gagal validasi (tanpa tulis DB). */
+    public function test_tanggal_di_luar_periode_ditolak(): void
+    {
+        $sebelum = DB::table('ueu_tbl_jurnal_spm')->count();
+
+        $this->akuntansi()->get('/akuntansi/jurnal-umum')->assertOk()
+            ->assertSee('min="2026-09-01"', false)->assertSee('max="2027-08-31"', false)
+            ->assertSee('01-09-2026 s/d 31-08-2027');
+
+        // Baris kosong → tetap gagal (baris), sehingga tidak ada yang tersimpan.
+        $kirim = fn (string $tgl) => $this->akuntansi()->from('/akuntansi/jurnal-umum')->post('/akuntansi/jurnal-umum', [
+            'tgl_trk' => $tgl, 'uraian' => 'Uji', 'baris' => [],
+        ]);
+
+        $kirim('2026-08-31')->assertRedirect('/akuntansi/jurnal-umum')
+            ->assertSessionHasErrors(['tgl_trk' => 'Tanggal termasuk periode lama. Jurnal T.A 2026/2027 hanya menerima tanggal 01-09-2026 s/d 31-08-2027.']);
+        $kirim('2025-11-08')->assertSessionHasErrors('tgl_trk');
+        $kirim('2027-09-01')->assertSessionHasErrors(['tgl_trk' => 'Tanggal melewati akhir periode. Jurnal T.A 2026/2027 hanya menerima tanggal 01-09-2026 s/d 31-08-2027.']);
+        $kirim('2026-09-01')->assertSessionDoesntHaveErrors('tgl_trk')->assertSessionHasErrors('baris');
+        $kirim('2027-08-31')->assertSessionDoesntHaveErrors('tgl_trk');
+
+        $this->assertSame($sebelum, DB::table('ueu_tbl_jurnal_spm')->count());
+    }
+
+    /** Periode login lama (2025): bawaan tanggal dijepit ke akhir periode itu, bukan hari ini. */
+    public function test_tanggal_bawaan_di_dalam_periode(): void
+    {
+        $this->akuntansi()->withSession(['periode' => '2025'])->get('/akuntansi/jurnal-umum')->assertOk()
+            ->assertViewHas('tglBawaan', '2026-08-31')
+            ->assertSee('min="2025-09-01"', false)->assertSee('max="2026-08-31"', false);
+    }
+
+    /** Periode bukan periode berjalan (penjurnalan 'close', mis. 2025): form dikunci & simpan ditolak sebelum validasi. */
+    public function test_periode_bukan_berjalan_dikunci(): void
+    {
+        // T.A tertutup yang juga tidak dibuka admin (jurnal_dibuka, bila kolomnya sudah ada).
+        $tutup = DB::table('ueu_tbl_info')->where('penjurnalan', '!=', 'open')
+            ->when(\App\Models\Info::adaKolomJurnalDibuka(), fn ($q) => $q->where('jurnal_dibuka', '!=', 'ya'))
+            ->orderByDesc('th_angg')->value('th_angg');
+        if (!$tutup) {
+            $this->markTestSkipped('Tidak ada T.A dengan penjurnalan ditutup.');
+        }
+        $sebelum = DB::table('ueu_tbl_jurnal_spm')->count();
+        $sesi = fn () => $this->akuntansi()->withSession(['periode' => (string) $tutup]);
+
+        $sesi()->get('/akuntansi/jurnal-umum')->assertOk()
+            ->assertSee('Form dikunci')->assertSee('<fieldset class="ju-kunci" disabled', false)
+            ->assertSee(route('akuntansi.periode'), false);
+
+        $sesi()->from('/akuntansi/jurnal-umum')->post('/akuntansi/jurnal-umum', ['tgl_trk' => $tutup . '-10-01', 'uraian' => 'Uji', 'baris' => []])
+            ->assertRedirect('/akuntansi/jurnal-umum')
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'bukan periode berjalan'))
+            ->assertSessionHasNoErrors();
+
+        // Periode berjalan (2026) tidak dikunci.
+        $this->akuntansi()->get('/akuntansi/jurnal-umum')->assertOk()
+            ->assertDontSee('Form dikunci')->assertDontSee('<fieldset class="ju-kunci" disabled', false);
+
+        $this->assertSame($sebelum, DB::table('ueu_tbl_jurnal_spm')->count());
+    }
+
     public function test_role_lain_ditolak(): void
     {
         $this->actingAs(User::where('wewenang', 'kasir')->firstOrFail())->withSession(['wewenang' => 'kasir'])

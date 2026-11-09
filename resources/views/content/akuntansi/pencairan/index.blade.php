@@ -41,6 +41,10 @@
 
 @include('_partials._flash')
 
+@unless ($terbuka)
+  @include('_partials._periode-terkunci', ['apa' => 'jurnal pencairan'])
+@endunless
+
 <div class="card">
   <div class="card-header">
     <h5 class="mb-0">Belum Dijurnal</h5>
@@ -63,11 +67,18 @@
             <td class="text-end rp fw-semibold">{{ $rp($r->ajuan) }}</td>
             <td>{{ $r->induk->nama }}</td>
             <td class="text-end">
+              @if (!$terbuka)
+                {{-- Periode tidak terbuka untuk penjurnalan. --}}
+                <span class="d-inline-block" tabindex="0" title="Penjurnalan T.A {{ $tahun }}/{{ $tahun + 1 }} ditutup">
+                  <button type="button" class="btn btn-sm btn-label-secondary" disabled><i class="ti ti-lock ti-xs me-1"></i>Jurnalkan</button>
+                </span>
+              @else
               <form method="POST" action="{{ route('akuntansi.pencairan.jurnal', $r->id_spp) }}" class="d-inline form-jurnal"
                 data-spm="{{ $r->no_spm }}" data-unit="{{ $r->induk->nama }}" data-nominal="{{ $rp($r->ajuan) }}">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-primary"><i class="ti ti-notebook ti-xs me-1"></i>Jurnalkan</button>
               </form>
+              @endif
             </td>
           </tr>
         @empty

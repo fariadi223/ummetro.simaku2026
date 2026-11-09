@@ -88,6 +88,21 @@ class OtorisasiSppController extends Controller
     ]);
   }
 
+  /**
+   * Cetak lembar SPM dari Daftar SPM (spm/detail/nomor v1, tautan "cetak SPM" di spm_unit).
+   * Seperti v1, hanya SPM yang sudah disetujui WR II (verifikasi2 = Disetujui); lebih ketat dari v1:
+   * hanya SPM milik sub unit sendiri (v1 menerima nomor SPM apa saja dari URL).
+   */
+  public function cetakSpm(int $id)
+  {
+    [, $tahun, $idUnit] = $this->konteks();
+    $noSpm = $this->querySpp($idUnit, $tahun)->where('s.id_spp', $id)->where('s.no_spm', '!=', '')
+      ->where('s.status_spm', 'Disetujui')->where('s.verifikasi2', 'Disetujui')
+      ->first()?->no_spm ?? abort(404);
+
+    return view('content.adminspm.spm.cetak', $this->spp->dataCetakSpm($tahun, $noSpm));
+  }
+
   public function setujui(Request $request, int $id)
   {
     [$unit, $tahun, $idUnit] = $this->konteks();

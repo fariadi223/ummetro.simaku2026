@@ -5,15 +5,20 @@
 @section('vendor-style')
 <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}">
 <link rel="stylesheet" href="{{ asset('assets/vendor/libs/sweetalert2/sweetalert2.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}">
 @endsection
 
 @section('vendor-script')
 <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
 <script src="{{ asset('assets/vendor/libs/sweetalert2/sweetalert2.js') }}"></script>
+<script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
 @endsection
 
 @section('page-style')
 <style>
+  /* fieldset[disabled] tidak menonaktifkan tampilan select2 & altInput flatpickr: kunci lewat CSS. */
+  .ju-kunci[disabled] { opacity: .6; }
+  .ju-kunci[disabled] .select2-container, .ju-kunci[disabled] .btn { pointer-events: none; }
   .form-ju .form-label { font-weight: 600; }
   .rupiah { text-align: right; font-variant-numeric: tabular-nums; }
   .tabel-ju td { vertical-align: middle; }
@@ -56,17 +61,27 @@
 
 @include('_partials._flash')
 
+@unless ($terbuka)
+  @include('_partials._periode-terkunci', ['apa' => 'jurnal umum'])
+@endunless
+
 <div class="row g-4">
   <div class="col-7">
     <form method="POST" action="{{ route('akuntansi.jurnal-umum.store') }}" class="card form-ju" id="formJu" novalidate>
       @csrf
+      {{-- Periode bukan periode berjalan: seluruh isi form (termasuk baris yang ditambah lewat JS) ikut nonaktif. --}}
+      <fieldset class="ju-kunci" @disabled(!$terbuka)>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label" for="f-tgl">Tanggal <span class="text-danger">*</span></label>
-            <input type="date" id="f-tgl" name="tgl_trk" value="{{ old('tgl_trk', today()->toDateString()) }}" required
+            <input type="text" id="f-tgl" name="tgl_trk" value="{{ old('tgl_trk', $tglBawaan) }}" required autocomplete="off" placeholder="Pilih tanggal"
+              min="{{ $periodeAwal }}" max="{{ $periodeAkhir }}"
               class="form-control @error('tgl_trk') is-invalid @enderror">
-            @error('tgl_trk')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            @error('tgl_trk')<div class="invalid-feedback">{{ $message }}</div>@else
+              <div class="form-text">Periode T.A {{ $tahun }}/{{ $tahun + 1 }}:
+                {{ \Illuminate\Support\Carbon::parse($periodeAwal)->format('d-m-Y') }} s/d {{ \Illuminate\Support\Carbon::parse($periodeAkhir)->format('d-m-Y') }}</div>
+            @enderror
           </div>
           <div class="col-md-8">
             <label class="form-label" for="f-bukti">No. Bukti</label>
@@ -147,6 +162,7 @@
         <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i>Jurnalkan</button>
         <button type="reset" class="btn btn-label-secondary" id="btnReset">Kosongkan</button>
       </div>
+      </fieldset>
     </form>
   </div>
 
@@ -216,6 +232,19 @@
 @section('page-script')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // Datepicker tanggal jurnal: hanya tanggal di periode T.A (min/max sama dengan validasi server).
+  const elTgl = document.getElementById('f-tgl');
+  flatpickr(elTgl, {
+    dateFormat: 'Y-m-d', altInput: true, altFormat: 'd M Y', monthSelectorType: 'static',
+    minDate: elTgl.getAttribute('min'), maxDate: elTgl.getAttribute('max'), disableMobile: true,
+    locale: {
+      firstDayOfWeek: 1,
+      weekdays: { shorthand: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'], longhand: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] },
+      months: { shorthand: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+        longhand: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'] }
+    }
+  });
+
   const form = document.getElementById('formJu');
   const tbody = document.getElementById('barisJurnal');
   const tpl = document.getElementById('tplBaris');

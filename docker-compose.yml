@@ -16,8 +16,13 @@ services:
     volumes:
       - ./:/var/www/html
 
+    depends_on:
+      redis:
+        condition: service_healthy
+
     networks:
       - proxy-manager
+      - simaku-internal
 
 
   nginx:
@@ -36,6 +41,42 @@ services:
       - proxy-manager
 
 
+  # Cache, session, lock, dan antrian Laravel. Hanya bisa dijangkau container
+  # app lewat jaringan internal (hostname "redis"), tidak lewat proxy-manager.
+  redis:
+    image: redis:7.2-alpine
+    container_name: simakuumm-redis
+    restart: unless-stopped
+
+    # volatile-lru: saat memori penuh hanya kunci ber-TTL (cache & session)
+    # yang dibuang; antrian job (tanpa TTL) tidak ikut hilang.
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --save ""
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    networks:
+      - simaku-internal
+
+
+volumes:
+  redis-data:
+
+
 networks:
   proxy-manager:
     external: true
+  simaku-internal:
+    driver: bridge

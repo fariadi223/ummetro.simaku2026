@@ -12,7 +12,8 @@ return [
   | diproses (v1: hanya 11.01, tombol "Tambah" di spp/proses1).
   */
   /*
-  | Folder (di bawah public/) berisi spesimen tanda tangan untuk cetak SPM:
+  | Folder (di bawah storage/app/public/, disajikan lewat symlink public/storage)
+  | berisi spesimen tanda tangan untuk cetak SPM:
   | <kode unit induk>.png (mis. 01.00.png), otorisator1.png, otorisator2.png (v1: images/specimen).
   */
   'specimen_dir' => env('SIMAKU_SPECIMEN_DIR', 'images/specimen'),

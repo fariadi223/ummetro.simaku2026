@@ -31,7 +31,9 @@ use Illuminate\Validation\ValidationException;
  *   - pilihan "Kas Universitas" benar-benar memakai 569 (v1 tetap 570);
  *   - kolom bukti berisi No. Bukti yang diinput (v1 terisi nilai anggaran rinci);
  *   - batas nominal = sisa anggaran rinci (anggaran − realisasi), dan saldo kas hanya dicek untuk belanja;
- *   - filter unit / no. SPM / no. SPP lewat query string, daftar dipaginasi.
+ *   - filter unit / no. SPM / no. SPP lewat query string, daftar dipaginasi;
+ *   - jurnal hanya pada periode berjalan atau T.A yang penjurnalannya dibuka admin (Info::jurnalTerbuka):
+ *     selain itu tombol Jurnal (modal) dinonaktifkan & simpan ditolak.
  */
 class RealisasiController extends Controller
 {
@@ -67,6 +69,8 @@ class RealisasiController extends Controller
 
     return view('content.akuntansi.realisasi.index', [
       'tahun' => $tahun,
+      'terbuka' => Info::jurnalTerbuka($tahun),
+      'tahunBerjalan' => Info::tahunPenjurnalan(),
       'f' => $f,
       'saldoUnit' => $saldoUnit,
       'saldoUniv' => $this->saldoKas($tahun, self::KAS_UNIV),
@@ -82,6 +86,13 @@ class RealisasiController extends Controller
   /** Simpan jurnal realisasi dari modal di daftar (jurnal_unit/jurnal_univ + *_simpan + jurnal_validasi + jurnalkasunit v1). */
   public function store(Request $request, int $spp, int $rinci)
   {
+    $tahun = $this->tahun();
+    if (!Info::jurnalTerbuka($tahun)) {
+      // Tanpa _baris: modal tidak dibuka lagi.
+      return redirect($this->urlKembali($request))
+        ->with('error', "Periode T.A {$tahun}/" . ($tahun + 1) . ' bukan periode berjalan dan penjurnalannya tidak dibuka. Jurnal tidak disimpan.');
+    }
+
     try {
       return $this->simpan($request, $spp, $rinci);
     } catch (ValidationException $e) {

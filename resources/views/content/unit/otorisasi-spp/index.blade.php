@@ -4,7 +4,7 @@
 
 @section('page-style')
 <style>
-  .spp-tabel td { vertical-align: top; }
+  .spp-tabel td { vertical-align: middle; }
   .spp-tabel .rp { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .spp-tabel .nomor { font-family: var(--bs-font-monospace); font-size: .8rem; white-space: nowrap; }
   .spp-tabel tr.detail td { background: rgba(var(--bs-secondary-rgb), .04); border-top: 0; }
@@ -54,16 +54,19 @@
       <h5 class="mb-0">Daftar SPP <small class="text-muted fw-normal">(Surat Permintaan Pembayaran)</small></h5>
       <small class="text-muted">SPP yang dikirim sub unit; SPP yang ditolak tidak ditampilkan</small>
     </div>
-    <ul class="nav nav-pills" role="tablist">
-      <li class="nav-item"><a href="{{ route('unit.otorisasi.index') }}" class="nav-link py-1 {{ $semua ? '' : 'active' }}">Menunggu
-        <span class="badge rounded-pill {{ $semua ? 'bg-label-warning' : 'bg-white text-primary' }} ms-1">{{ $menunggu }}</span></a></li>
-      <li class="nav-item"><a href="{{ route('unit.otorisasi.index', ['status' => 'semua']) }}" class="nav-link py-1 {{ $semua ? 'active' : '' }}">Semua</a></li>
-    </ul>
+    <nav class="filter-chips" aria-label="Saring SPP">
+      <a href="{{ route('unit.otorisasi.index') }}" class="filter-chip {{ $semua ? '' : 'active' }}" @if (!$semua) aria-current="page" @endif>
+        <i class="ti ti-bell" aria-hidden="true"></i><span>Menunggu</span><strong>{{ $menunggu }}</strong>
+      </a>
+      <a href="{{ route('unit.otorisasi.index', ['status' => 'semua']) }}" class="filter-chip {{ $semua ? 'active' : '' }}" @if ($semua) aria-current="page" @endif>
+        <i class="ti ti-files" aria-hidden="true"></i><span>Semua</span><strong>{{ $jumlahSpp }}</strong>
+      </a>
+    </nav>
   </div>
   <div class="table-responsive">
     <table class="table spp-tabel mb-0">
       <thead>
-        <tr><th style="width: 40px;">No</th><th>Tgl. Penyajian</th><th>No. SPP</th><th>Sub Unit</th><th class="text-end">Nominal</th>
+        <tr><th style="width: 70px;">No</th><th>Tgl. Penyajian</th><th>No. SPP / Sub Unit</th><th class="text-end">Nominal</th>
           <th>Otorisasi Pimpinan</th><th>Status SPP</th><th style="width: 130px;"></th></tr>
       </thead>
       <tbody>
@@ -72,10 +75,18 @@
             [$kelasOto, $teksOto] = $badgeOtorisasi[$s->otorisasi] ?? ['bg-label-secondary', $s->otorisasi];
           @endphp
           <tr>
-            <td class="text-muted">{{ $loop->iteration }}</td>
+            <td class="text-muted text-nowrap">
+              <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-icon btn-text-secondary rounded-pill btn-lipat" title="Lihat kegiatan"
+                        data-bs-toggle="collapse" data-bs-target="#keg-{{ $s->id_spp }}" aria-expanded="false"><i class="ti ti-chevron-down"></i></button>
+                <span>{{ $loop->iteration }}</span>
+              </div>
+            </td>
             <td class="text-nowrap">{{ $tglId($s->tgl_saji) }}</td>
-            <td class="nomor">{{ $s->no_spp }}</td>
-            <td style="white-space: normal; min-width: 160px;"><span class="font-monospace small text-muted">{{ $s->kode_unit }}</span> {{ $s->nama_unit }}</td>
+            <td style="white-space: normal; min-width: 200px;">
+              <div class="nomor">{{ $s->no_spp }}</div>
+              <div class="small"><span class="font-monospace text-muted">{{ $s->kode_unit }}</span> {{ $s->nama_unit }}</div>
+            </td>
             <td class="text-end rp">{{ $rp($s->nominal) }}<div class="small text-muted">{{ $s->kegiatan }} kegiatan</div></td>
             <td><span class="badge {{ $kelasOto }}">{{ $teksOto }}</span></td>
             <td>
@@ -85,18 +96,16 @@
               @endif
             </td>
             <td class="text-end text-nowrap">
-              <button type="button" class="btn btn-sm btn-icon btn-text-secondary rounded-pill btn-lipat" title="Lihat kegiatan"
-                      data-bs-toggle="collapse" data-bs-target="#keg-{{ $s->id_spp }}" aria-expanded="false"><i class="ti ti-chevron-down"></i></button>
               @if ($s->otorisasi === 'Belum')
                 <a href="{{ route('unit.otorisasi.show', $s->id_spp) }}" class="btn btn-sm btn-primary"><i class="ti ti-signature ti-xs me-1"></i>Otorisasi</a>
               @else
-                <a href="{{ route('unit.otorisasi.show', $s->id_spp) }}" class="btn btn-sm btn-label-secondary">Tampilkan</a>
+                <a href="{{ route('unit.otorisasi.show', $s->id_spp) }}" class="btn btn-sm btn-label-primary text-nowrap"><i class="ti ti-eye ti-xs me-1"></i>Tampilkan</a>
               @endif
             </td>
           </tr>
           <tr class="detail collapse" id="keg-{{ $s->id_spp }}">
             <td></td>
-            <td colspan="7" class="py-2">
+            <td colspan="6" class="py-2">
               <ul class="list-unstyled mb-0 small">
                 @foreach ($s->baris as $b)
                   <li class="d-flex justify-content-between gap-3 py-1 {{ $loop->last ? '' : 'border-bottom' }}">
@@ -108,7 +117,7 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="8" class="text-center text-muted py-5">
+          <tr><td colspan="7" class="text-center text-muted py-5">
             {{ $semua ? 'Tidak ada data Surat Permintaan Pembayaran (SPP).' : 'Tidak ada SPP yang menunggu otorisasi.' }}
           </td></tr>
         @endforelse
@@ -126,24 +135,42 @@
   <div class="table-responsive">
     <table class="table spp-tabel mb-0">
       <thead>
-        <tr><th style="width: 40px;">No</th><th>Tgl. Penyajian</th><th>No. SPM</th><th>No. SPP</th><th>Sub Unit</th><th class="text-end">Nominal</th><th>Status SPM</th></tr>
+        <tr><th style="width: 40px;">No</th><th>No. SPM / Tgl. Penyajian</th><th>No. SPP / Sub Unit</th><th class="text-end">Nominal</th><th>Status SPM</th><th style="width: 110px;"></th></tr>
       </thead>
       <tbody>
         @forelse ($spm as $s)
           <tr>
             <td class="text-muted">{{ $loop->iteration }}</td>
-            <td class="text-nowrap">{{ $tglId($s->tgl_saji) }}</td>
-            <td class="nomor">{{ $s->no_spm ?: '—' }}</td>
-            <td class="nomor">{{ $s->no_spp }}</td>
-            <td style="white-space: normal;"><span class="font-monospace small text-muted">{{ $s->kode_unit }}</span> {{ $s->nama_unit }}</td>
+            <td>
+              <div class="nomor">{{ $s->no_spm ?: '—' }}</div>
+              <div class="small text-muted text-nowrap">{{ $tglId($s->tgl_saji) }}</div>
+            </td>
+            <td style="white-space: normal; min-width: 200px;">
+              <div class="nomor">{{ $s->no_spp }}</div>
+              <div class="small"><span class="font-monospace text-muted">{{ $s->kode_unit }}</span> {{ $s->nama_unit }}</div>
+            </td>
             <td class="text-end rp">{{ $rp($s->nominal) }}</td>
             <td><span class="badge bg-label-success">{{ $s->status_spm }}</span></td>
+            <td class="text-end">
+              {{-- Seperti v1: lembar SPM baru bisa dicetak setelah disetujui WR II. --}}
+              @if ($s->verifikasi2 === 'Disetujui')
+                <a href="{{ route('unit.otorisasi.spm.cetak', $s->id_spp) }}" target="_blank" data-cetak-langsung class="btn btn-sm btn-dark text-nowrap">
+                  <i class="ti ti-printer ti-xs me-1"></i>Cetak SPM
+                </a>
+              @else
+                <small class="text-muted text-nowrap">Menunggu WR II</small>
+              @endif
+            </td>
           </tr>
         @empty
-          <tr><td colspan="7" class="text-center text-muted py-4">Belum ada SPM pada T.A ini.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-4">Belum ada SPM pada T.A ini.</td></tr>
         @endforelse
       </tbody>
     </table>
   </div>
 </div>
+@endsection
+
+@section('page-script')
+  @include('content.adminspm.spm._cetak-langsung')
 @endsection

@@ -18,6 +18,9 @@
   .rupiah { text-align: right; font-variant-numeric: tabular-nums; }
   .saldo-besar { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--bs-heading-color); line-height: 1.1; }
   .riwayat .rp { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  /* fieldset[disabled] tidak menonaktifkan tampilan select2: kunci lewat CSS. */
+  .setor-kunci[disabled] { opacity: .6; }
+  .setor-kunci[disabled] .select2-container { pointer-events: none; }
 </style>
 @endsection
 
@@ -43,10 +46,16 @@
 
 @include('_partials._flash')
 
+@unless ($terbuka)
+  @include('_partials._periode-terkunci', ['apa' => 'setoran kas unit'])
+@endunless
+
 <div class="row g-4">
   <div class="col-lg-8">
     <form method="POST" action="{{ route('akuntansi.penyetoran.store', $ff) }}" class="card form-setor" id="formSetor" novalidate>
       @csrf
+      {{-- Periode bukan periode berjalan: isian nonaktif (tombol Kembali tetap aktif). --}}
+      <fieldset class="setor-kunci" @disabled(!$terbuka)>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-6">
@@ -99,8 +108,9 @@
           </div>
         </div>
       </div>
+      </fieldset>
       <div class="card-footer d-flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i>Proses Setoran</button>
+        <button type="submit" class="btn btn-primary" @disabled(!$terbuka)><i class="ti ti-device-floppy me-1"></i>Proses Setoran</button>
         <a href="{{ route('akuntansi.penyetoran.index') }}" class="btn btn-label-secondary">Kembali</a>
       </div>
     </form>

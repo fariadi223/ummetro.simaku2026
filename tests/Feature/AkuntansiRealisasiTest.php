@@ -80,6 +80,33 @@ class AkuntansiRealisasiTest extends TestCase
         $this->assertSame('CLK', DB::table('ueu_tbl_spp')->where('id_spp', $c->id_spp)->value('jurnalspm'));
     }
 
+    /** T.A tertutup (dan tidak dibuka admin): tombol Jurnal nonaktif (modal tak bisa dibuka) & simpan ditolak. */
+    public function test_periode_tertutup_modal_jurnal_dikunci(): void
+    {
+        $tutup = DB::table('ueu_tbl_info')->where('penjurnalan', '!=', 'open')
+            ->when(\App\Models\Info::adaKolomJurnalDibuka(), fn ($q) => $q->where('jurnal_dibuka', '!=', 'ya'))
+            ->orderByDesc('th_angg')->value('th_angg');
+        if (!$tutup) {
+            $this->markTestSkipped('Tidak ada T.A dengan penjurnalan ditutup.');
+        }
+        $sebelum = DB::table('ueu_tbl_jurnal_spm')->count();
+        $sesi = fn () => $this->akuntansi()->withSession(['periode' => (string) $tutup]);
+
+        $sesi()->get('/akuntansi/realisasi')->assertOk()
+            ->assertSee('Form dikunci')->assertDontSee('btn btn-sm btn-primary btn-jurnal', false);
+
+        // Ditolak sebelum validasi & sebelum baris dicari; modal tidak dibuka lagi (tanpa _baris).
+        $sesi()->post('/akuntansi/realisasi/1/1', ['bukti' => 'T-1', 'tgl_trk' => $tutup . '-10-01', 'nominal' => '1000', 'kas' => 'univ'])
+            ->assertRedirect()
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'bukan periode berjalan'))
+            ->assertSessionHasNoErrors()->assertSessionMissing('_old_input');
+
+        // Periode berjalan: tidak dikunci.
+        $this->akuntansi()->get('/akuntansi/realisasi')->assertOk()->assertDontSee('Form dikunci');
+
+        $this->assertSame($sebelum, DB::table('ueu_tbl_jurnal_spm')->count());
+    }
+
     public function test_role_lain_ditolak(): void
     {
         $this->actingAs(User::where('wewenang', 'kasir')->firstOrFail())->withSession(['wewenang' => 'kasir'])

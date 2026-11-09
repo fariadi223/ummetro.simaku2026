@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Info;
+use App\Models\Unit;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -109,5 +110,53 @@ class SppAnggaran
       })
       ->sortByDesc(fn ($s) => (int) $s->no_spp)
       ->values();
+  }
+
+  /**
+   * Data lembar SPM siap cetak (Dashboard::spm_cetak v1), dipakai Operator SPM, otorisator BAK/WR II,
+   * dan pimpinan unit induk (view content.adminspm.spm.cetak).
+   *
+   *   Kegiatan & ajuan semua baris nomor SPM pada T.A, pernyataan unit, tanda tangan pimpinan unit
+   *   induk FF.00, persetujuan BAK (otorisator1) & WR II (otorisator2). Spesimen tanda tangan dari
+   *   storage/app/public/<simaku.specimen_dir>/{kode induk|otorisator1|otorisator2}.png bila berkasnya ada.
+   */
+  public function dataCetakSpm(int $tahun, string $noSpm): array
+  {
+    $baris = $this->query()->where('s.tahun', (string) $tahun)->where('s.no_spm', $noSpm)->get();
+    $ringkas = $baris->first() ?? abort(404);
+
+    // v1: kode unit dari nomor SPM ("N/SPM/<kode>/..."), penanda tangan = unit induk FF.00.
+    $kodeUnit = (string) $ringkas->kode_unit;
+    $induk = Unit::where('kode', explode('.', $kodeUnit)[0] . '.00')->first();
+
+    $ttd = fn (string $w) => DB::table('ueu_tbl_user as t1')->join('ueu_tbl_unit as t0', 't0.id_unit', '=', 't1.id_unit')
+      ->where('t1.wewenang', $w)->orderBy('t1.id_unit')->first(['t0.kode', 't0.nama', 't0.nama_pimp', 't0.an_nama_pimp']);
+
+    return [
+      'tahun' => $tahun,
+      'noSpm' => $noSpm,
+      'ringkas' => $ringkas,
+      'baris' => $baris,
+      'unit' => Unit::where('kode', $kodeUnit)->first(),
+      'induk' => $induk,
+      'ttd1' => $ttd('otorisator1'),
+      'ttd2' => $ttd('otorisator2'),
+      'spesimen' => [
+        'induk' => $induk ? $this->spesimen($induk->kode) : null,
+        'bak' => $ringkas->verifikasi1 === 'Disetujui' ? $this->spesimen('otorisator1') : null,
+        'wr2' => $ringkas->verifikasi2 === 'Disetujui' ? $this->spesimen('otorisator2') : null,
+      ],
+    ];
+  }
+
+  /**
+   * URL gambar spesimen tanda tangan bila berkasnya ada: storage/app/public/<specimen_dir>/<nama>.png,
+   * disajikan lewat symlink public/storage (v1: images/specimen/<nama>.png).
+   */
+  private function spesimen(string $nama): ?string
+  {
+    $rel = trim((string) config('simaku.specimen_dir', 'images/specimen'), '/') . '/' . $nama . '.png';
+
+    return is_file(storage_path('app/public/' . $rel)) ? asset('storage/' . $rel) : null;
   }
 }

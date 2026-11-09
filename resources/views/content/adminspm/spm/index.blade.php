@@ -78,7 +78,7 @@
             <td class="text-end rp">{{ $rp($m->nominal) }}</td>
             <td><span class="badge {{ $k1 }}"><i class="ti {{ $i1 }} ti-xs me-1"></i>{{ $t1 }}</span></td>
             <td><span class="badge {{ $k2 }}"><i class="ti {{ $i2 }} ti-xs me-1"></i>{{ $t2 }}</span></td>
-            <td class="text-end"><a href="{{ route($rute . '.cetak', $m->id_spp) }}" target="_blank" rel="noopener" class="btn btn-sm btn-label-primary"><i class="ti ti-printer ti-xs me-1"></i>Cetak</a></td>
+            <td class="text-end"><a href="{{ route($rute . '.cetak', $m->id_spp) }}" target="_blank" rel="noopener" data-cetak-langsung class="btn btn-sm btn-label-primary"><i class="ti ti-printer ti-xs me-1"></i>Cetak</a></td>
           </tr>
         @empty
           <tr><td colspan="9" class="text-center text-muted py-5">
@@ -103,4 +103,8 @@
     </div>
   @endif
 </div>
+@endsection
+
+@section('page-script')
+  @include('content.adminspm.spm._cetak-langsung')
 @endsection

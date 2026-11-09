@@ -47,6 +47,30 @@ class AkuntansiPencairanTest extends TestCase
         $this->assertSame($jurnal, DB::table('ueu_tbl_jurnal_spm')->count());
     }
 
+    /** T.A tertutup (dan tidak dibuka admin): tombol Jurnalkan nonaktif & simpan ditolak sebelum baris dicari. */
+    public function test_periode_tertutup_jurnal_dikunci(): void
+    {
+        $tutup = DB::table('ueu_tbl_info')->where('penjurnalan', '!=', 'open')
+            ->when(\App\Models\Info::adaKolomJurnalDibuka(), fn ($q) => $q->where('jurnal_dibuka', '!=', 'ya'))
+            ->orderByDesc('th_angg')->value('th_angg');
+        if (!$tutup) {
+            $this->markTestSkipped('Tidak ada T.A dengan penjurnalan ditutup.');
+        }
+        $sebelum = [DB::table('ueu_tbl_jurnal_spm')->count(), DB::table('ueu_tbl_spp')->where('jurnalspm', 'CLK')->count()];
+        $sesi = fn () => $this->akuntansi()->withSession(['periode' => (string) $tutup]);
+
+        $sesi()->get('/akuntansi/pencairan')->assertOk()
+            ->assertSee('Form dikunci')->assertDontSee('class="d-inline form-jurnal"', false);
+
+        $sesi()->post('/akuntansi/pencairan/1/jurnal')
+            ->assertRedirect('/akuntansi/pencairan')
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'bukan periode berjalan'));
+
+        $this->akuntansi()->get('/akuntansi/pencairan')->assertOk()->assertDontSee('Form dikunci');
+
+        $this->assertSame($sebelum, [DB::table('ueu_tbl_jurnal_spm')->count(), DB::table('ueu_tbl_spp')->where('jurnalspm', 'CLK')->count()]);
+    }
+
     public function test_role_lain_ditolak(): void
     {
         $this->actingAs(User::where('wewenang', 'kasir')->firstOrFail())->withSession(['wewenang' => 'kasir'])

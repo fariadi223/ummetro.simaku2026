@@ -49,6 +49,16 @@ if [ -f artisan ]; then
 
     php artisan optimize:clear || true
 
+    # opcache.validate_timestamps=0 (php.ini) berarti perubahan kode/.env
+    # memang baru terpakai setelah container di-restart, jadi config, route,
+    # dan view aman di-cache di sini: tiap request tidak lagi mem-parse .env
+    # dan seluruh berkas config/route.
+    echo "Caching Laravel config, routes & views..."
+
+    php artisan config:cache || true
+    php artisan route:cache || true
+    php artisan view:cache || true
+
     echo "Creating storage link..."
 
     php artisan storage:link || true

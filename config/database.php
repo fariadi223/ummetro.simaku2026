@@ -123,6 +123,10 @@ return [
 
         'client' => env('REDIS_CLIENT', 'phpredis'),
 
+        // persistent: koneksi dipakai ulang antar-request PHP-FPM (hemat TCP
+        // handshake). persistent_id WAJIB beda per koneksi: phpredis memakai
+        // ulang socket per host:port:persistent_id, dan tanpa itu SELECT db
+        // milik koneksi cache bisa terbawa ke koneksi session (dan sebaliknya).
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
@@ -135,6 +139,8 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent_id' => 'simaku-v2-default',
         ],
 
         'cache' => [
@@ -144,6 +150,22 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent_id' => 'simaku-v2-cache',
+        ],
+
+        // Session dipisah dari cache: `php artisan cache:clear` (juga dijalankan
+        // start-container lewat optimize:clear) mem-FLUSHDB database cache, dan
+        // tanpa pemisahan ini semua pengguna ikut ter-logout.
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '2'),
+            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent_id' => 'simaku-v2-session',
         ],
 
     ],

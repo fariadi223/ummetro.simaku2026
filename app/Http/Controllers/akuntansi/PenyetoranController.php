@@ -22,6 +22,8 @@ use Illuminate\Validation\Rule;
  *
  * Perbedaan dari v1: input bukti & isian digabung dalam satu form, rekening debet tidak boleh
  * Kas di Unit Kerja itu sendiri, dan kedua baris jurnal disimpan dalam satu transaksi.
+ * Setoran hanya pada periode berjalan atau T.A yang penjurnalannya dibuka admin (Info::jurnalTerbuka); lainnya: form dikunci
+ * & simpan ditolak.
  */
 class PenyetoranController extends Controller
 {
@@ -68,6 +70,8 @@ class PenyetoranController extends Controller
       'tahun' => $tahun,
       'unit' => $unit,
       'ff' => $ff,
+      'terbuka' => Info::jurnalTerbuka($tahun),
+      'tahunBerjalan' => Info::tahunPenjurnalan(),
       'saldo' => $this->saldo($tahun, $ff),
       'rekening' => $this->rekening(),
       'sumber' => Sumberdana::whereNotNull('kode')->orderBy('kode')->get(['id', 'kode', 'nama_penerimaan']),
@@ -82,6 +86,11 @@ class PenyetoranController extends Controller
   {
     $tahun = $this->tahun();
     $unit = $this->unitAtau404($ff);
+
+    if (!Info::jurnalTerbuka($tahun)) {
+      return redirect()->route('akuntansi.penyetoran.create', $ff)
+        ->with('error', "Periode T.A {$tahun}/" . ($tahun + 1) . ' bukan periode berjalan dan penjurnalannya tidak dibuka. Setoran tidak disimpan.');
+    }
 
     $request->merge(['nominal' => ($v = preg_replace('/\D/', '', (string) $request->input('nominal'))) === '' ? null : (int) $v]);
     $data = $request->validate([

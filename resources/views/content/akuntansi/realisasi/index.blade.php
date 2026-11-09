@@ -51,6 +51,10 @@
 
 @include('_partials._flash')
 
+@unless ($terbuka)
+  @include('_partials._periode-terkunci', ['apa' => 'jurnal realisasi'])
+@endunless
+
 <div class="card">
   <div class="card-header border-bottom">
     <form method="GET" action="{{ route('akuntansi.realisasi.index') }}" class="row g-3 align-items-end filter-real" id="formFilter">
@@ -113,7 +117,12 @@
             <td class="rp {{ $r->sisa < 0 ? 'text-danger' : ($r->sisa == 0 ? 'text-success' : '') }}">{{ $rp($r->sisa) }}</td>
             <td class="small">{{ $r->induk->nama ?? $r->nama_unit }}</td>
             <td class="text-end">
-              @if ($r->bisa)
+              @if ($r->bisa && !$terbuka)
+                {{-- Periode tidak terbuka untuk penjurnalan: modal jurnal tidak bisa dibuka. --}}
+                <span class="d-inline-block" tabindex="0" title="Penjurnalan T.A {{ $tahun }}/{{ $tahun + 1 }} ditutup">
+                  <button type="button" class="btn btn-sm btn-label-secondary" disabled><i class="ti ti-lock ti-xs me-1"></i>Jurnal</button>
+                </span>
+              @elseif ($r->bisa)
                 <button type="button" class="btn btn-sm btn-primary btn-jurnal" data-bs-toggle="modal" data-bs-target="#modalJurnal"
                   data-action="{{ route('akuntansi.realisasi.store', ['spp' => $r->id_spp, 'rinci' => $r->idrinci]) }}"
                   data-baris="{{ $r->id_spp }}-{{ $r->idrinci }}" data-spm="{{ $r->no_spm }}" data-spp="{{ $r->no_spp }}"

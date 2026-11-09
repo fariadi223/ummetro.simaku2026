@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Perbedaan dari v1: dikirim lewat POST ber-CSRF (v1 GET dengan parameter di URL), nilai diambil
  * dari database bukan dari URL, tidak bisa dijurnal dua kali, dan insert + update dalam satu transaksi.
+ * Jurnal hanya pada periode berjalan atau T.A yang penjurnalannya dibuka admin (Info::jurnalTerbuka):
+ * selain itu tombol Jurnalkan dinonaktifkan & simpan ditolak.
  */
 class PencairanController extends Controller
 {
@@ -38,6 +40,8 @@ class PencairanController extends Controller
 
     return view('content.akuntansi.pencairan.index', [
       'tahun' => $tahun,
+      'terbuka' => Info::jurnalTerbuka($tahun),
+      'tahunBerjalan' => Info::tahunPenjurnalan(),
       'daftar' => $daftar,
       'total' => $daftar->sum('ajuan'),
       'kasUniv' => $this->saldoKasUniv($tahun),
@@ -48,6 +52,10 @@ class PencairanController extends Controller
   public function jurnal(int $id)
   {
     $tahun = $this->tahun();
+    if (!Info::jurnalTerbuka($tahun)) {
+      return redirect()->route('akuntansi.pencairan.index')
+        ->with('error', "Periode T.A {$tahun}/" . ($tahun + 1) . ' bukan periode berjalan dan penjurnalannya tidak dibuka. Jurnal tidak disimpan.');
+    }
     $baris = $this->belumDijurnal($tahun)->firstWhere('id_spp', $id);
     if (!$baris) {
       return redirect()->route('akuntansi.pencairan.index')

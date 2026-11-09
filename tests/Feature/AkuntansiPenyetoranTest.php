@@ -59,6 +59,35 @@ class AkuntansiPenyetoranTest extends TestCase
         $this->assertSame($sebelum, $this->jumlahJurnal());
     }
 
+    /** Periode bukan periode berjalan (penjurnalan ditutup): form dikunci & simpan ditolak sebelum validasi. */
+    public function test_periode_bukan_berjalan_dikunci(): void
+    {
+        // T.A tertutup yang juga tidak dibuka admin (jurnal_dibuka, bila kolomnya sudah ada).
+        $tutup = DB::table('ueu_tbl_info')->where('penjurnalan', '!=', 'open')
+            ->when(\App\Models\Info::adaKolomJurnalDibuka(), fn ($q) => $q->where('jurnal_dibuka', '!=', 'ya'))
+            ->orderByDesc('th_angg')->value('th_angg');
+        if (!$tutup) {
+            $this->markTestSkipped('Tidak ada T.A dengan penjurnalan ditutup.');
+        }
+        $sebelum = DB::table('ueu_tbl_jurnal_spm')->count();
+        $sesi = fn () => $this->akuntansi()->withSession(['periode' => (string) $tutup]);
+
+        $sesi()->get('/akuntansi/penyetoran/01')->assertOk()
+            ->assertSee('Form dikunci')->assertSee('<fieldset class="setor-kunci" disabled', false)
+            ->assertSee('Kembali');
+
+        $sesi()->from('/akuntansi/penyetoran/01')->post('/akuntansi/penyetoran/01', [
+            'bukti' => 'UJI', 'tgl_trk' => $tutup . '-10-01', 'nominal' => '', 'debet' => '', 'id_sumber' => '',
+        ])->assertRedirect('/akuntansi/penyetoran/01')
+          ->assertSessionHas('error', fn ($m) => str_contains($m, 'bukan periode berjalan'))
+          ->assertSessionHasNoErrors();
+
+        $this->akuntansi()->get('/akuntansi/penyetoran/01')->assertOk()
+            ->assertDontSee('Form dikunci')->assertDontSee('<fieldset class="setor-kunci" disabled', false);
+
+        $this->assertSame($sebelum, DB::table('ueu_tbl_jurnal_spm')->count());
+    }
+
     public function test_role_lain_ditolak(): void
     {
         $this->actingAs(User::where('wewenang', 'kasir')->firstOrFail())

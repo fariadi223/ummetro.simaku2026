@@ -66,8 +66,10 @@ return [
             'driver' => 'redis',
             'connection' => 'default',
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 90,
-            'block_for' => null,
+            // Worker menunggu job dengan BLPOP (tanpa polling tiap --sleep detik).
+            // retry_after harus > --timeout worker (120 di supervisord.conf).
+            'retry_after' => 180,
+            'block_for' => 5,
             'after_commit' => false,
         ],
 

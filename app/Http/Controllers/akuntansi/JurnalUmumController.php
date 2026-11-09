@@ -5,7 +5,9 @@ namespace App\Http\Controllers\akuntansi;
 use App\Http\Controllers\Controller;
 use App\Models\Info;
 use App\Models\Sumberdana;
+use App\Services\NeracaPercobaan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -21,6 +23,10 @@ use Illuminate\Validation\Rule;
  * (form v1 menampilkan unit & MAK tetapi controller-nya tidak menyimpan; jurnal BKK v1 menyimpannya),
  * bisa lebih dari dua rekening (v1 tepat satu debet & satu kredit), jurnal wajib seimbang,
  * semua baris disimpan dalam satu transaksi, dan ditandai ket = 'JU' untuk riwayat di sebelah kanan form.
+ * Tanggal wajib di dalam periode T.A yang dijurnal (01-09-T s/d 31-08-T+1); tanggal periode lama ditolak
+ * (v1 menerima tanggal apa saja, sehingga jurnal bisa tercatat di T.A ini tetapi bertanggal T.A lalu).
+ * Input hanya untuk periode berjalan atau T.A yang penjurnalannya dibuka admin (Info::jurnalTerbuka);
+ * periode lain yang dipilih di session hanya bisa dilihat: form dikunci & simpan ditolak.
  */
 class JurnalUmumController extends Controller
 {
@@ -34,9 +40,16 @@ class JurnalUmumController extends Controller
   {
     $tahun = $this->tahun();
     $tgl = today()->toDateString(); // riwayat selalu hari ini
+    [$awal, $akhir] = NeracaPercobaan::periode($tahun);
 
     return view('content.akuntansi.jurnal-umum.form', [
       'tahun' => $tahun,
+      // Batas input tanggal (min/max di form); bawaan = hari ini, dijepit ke periode bila periode login bukan T.A berjalan.
+      'periodeAwal' => $awal,
+      'periodeAkhir' => $akhir,
+      'tglBawaan' => min(max($tgl, $awal), $akhir),
+      'terbuka' => Info::jurnalTerbuka($tahun),
+      'tahunBerjalan' => Info::tahunPenjurnalan(),
       'tglRiwayat' => $tgl,
       'riwayat' => ($semua = $this->riwayat($tahun, $tgl))->take(self::MAKS_RIWAYAT),
       'riwayatTotal' => $semua->count(),
@@ -50,6 +63,12 @@ class JurnalUmumController extends Controller
   public function store(Request $request)
   {
     $tahun = $this->tahun();
+    if (!Info::jurnalTerbuka($tahun)) {
+      return redirect()->route('akuntansi.jurnal-umum.create')
+        ->with('error', "Periode T.A {$tahun}/" . ($tahun + 1) . ' bukan periode berjalan dan penjurnalannya tidak dibuka. Jurnal tidak disimpan.');
+    }
+    [$awal, $akhir] = NeracaPercobaan::periode($tahun);
+    $tglId = fn (string $t) => Carbon::parse($t)->format('d-m-Y');
 
     // Normalisasi angka ("1.500.000" → 1500000) & buang baris yang benar-benar kosong.
     $angka = fn ($v) => ($v = preg_replace('/\D/', '', (string) $v)) === '' ? 0 : (int) $v;
@@ -60,7 +79,7 @@ class JurnalUmumController extends Controller
     $request->merge(['baris' => $baris]);
 
     $validator = Validator::make($request->all(), [
-      'tgl_trk' => ['required', 'date_format:Y-m-d'],
+      'tgl_trk' => ['required', 'date_format:Y-m-d', "after_or_equal:{$awal}", "before_or_equal:{$akhir}"],
       'bukti' => ['nullable', 'string', 'max:100'],
       'id_uk' => ['required', 'integer', Rule::exists('ueu_tbl_unit', 'id_unit')->where(fn ($q) => $q->where('kode', 'not like', '%.00'))],
       'id_mak' => ['nullable', 'integer', Rule::exists('ueu_tbl_mak4', 'idmak4')],
@@ -75,6 +94,10 @@ class JurnalUmumController extends Controller
       'baris.required' => 'Jurnal minimal terdiri dari 2 baris rekening.',
       'baris.*.idrek6.required' => 'Baris :position: rekening belum dipilih.',
       'baris.*.idrek6.exists' => 'Baris :position: rekening tidak ditemukan.',
+      'tgl_trk.after_or_equal' => "Tanggal termasuk periode lama. Jurnal T.A {$tahun}/" . ($tahun + 1)
+        . " hanya menerima tanggal {$tglId($awal)} s/d {$tglId($akhir)}.",
+      'tgl_trk.before_or_equal' => "Tanggal melewati akhir periode. Jurnal T.A {$tahun}/" . ($tahun + 1)
+        . " hanya menerima tanggal {$tglId($awal)} s/d {$tglId($akhir)}.",
     ], [
       'tgl_trk' => 'Tanggal', 'bukti' => 'No. Bukti', 'id_uk' => 'Unit', 'id_mak' => 'Mata Anggaran',
       'uraian' => 'Uraian', 'id_sumber' => 'Sumber Dana', 'baris' => 'Baris jurnal',

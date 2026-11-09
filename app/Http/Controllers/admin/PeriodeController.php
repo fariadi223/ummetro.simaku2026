@@ -11,6 +11,10 @@ use Illuminate\Http\Request;
  * Setting > Periode: padanan Admin::periode (pilih tahun anggaran yang
  * dikerjakan, disimpan di session) dan Admin::jadwal* (jadwal penganggaran
  * & komite di ueu_tbl_info) di v1.
+ *
+ * Tambahan v2: buka/tutup penjurnalan T.A di luar periode berjalan (kolom jurnal_dibuka, lihat
+ * database/sql/2026_11_09_ueu_tbl_info_jurnal_dibuka.sql). Periode berjalan (penjurnalan = 'open')
+ * tidak diubah di sini karena kolom itu dipakai v1 (login, laporan, tutup buku).
  */
 class PeriodeController extends Controller
 {
@@ -33,6 +37,7 @@ class PeriodeController extends Controller
     return view('content.admin.periode.index', [
       'daftar' => $daftar,
       'periode' => (int) session('periode'),
+      'adaJurnalDibuka' => Info::adaKolomJurnalDibuka(),
     ]);
   }
 
@@ -73,6 +78,26 @@ class PeriodeController extends Controller
     ]);
 
     return back()->with('status', "Jadwal T.A {$info->th_angg}/" . ($info->th_angg + 1) . ' berhasil diperbarui.');
+  }
+
+  /** Buka (dibuka=1) / tutup (dibuka=0) penjurnalan T.A di luar periode berjalan. */
+  public function jurnal(Request $request, Info $info)
+  {
+    $ta = "T.A {$info->th_angg}/" . ($info->th_angg + 1);
+
+    if (!Info::adaKolomJurnalDibuka()) {
+      return back()->with('error', 'Kolom jurnal_dibuka belum ada di ueu_tbl_info. Jalankan database/sql/2026_11_09_ueu_tbl_info_jurnal_dibuka.sql terlebih dahulu.');
+    }
+    if ($info->penjurnalan === 'open') {
+      return back()->with('error', "{$ta} adalah periode berjalan; penjurnalannya selalu dibuka.");
+    }
+
+    $dibuka = $request->validate(['dibuka' => ['required', 'boolean']])['dibuka'];
+    $info->update(['jurnal_dibuka' => $dibuka ? 'ya' : 'tidak']);
+
+    return back()->with('status', $dibuka
+      ? "Penjurnalan {$ta} dibuka. Akuntansi dapat menginput jurnal umum & setoran untuk T.A ini."
+      : "Penjurnalan {$ta} ditutup kembali.");
   }
 
   /** Tanggal lama tersimpan sebagai teks ("14 August 2026" atau "15-09-2027"). */
