@@ -10,13 +10,18 @@ use Illuminate\Support\Facades\DB;
  *
  * Per kelompok (Tanpa Pembatasan = 3.1.01, Dengan Pembatasan = 3.2.01; kelompok sumber dana menentukan pembagian):
  *   Surplus/(Defisit) Akumulasian
- *     Saldo awal                              = aset neto di Posisi Keuangan pada tanggal awal
+ *     Saldo awal                              = aset neto di Posisi Keuangan pada tanggal awal − saldo awal PKL
  *     Surplus (defisit) tahun berjalan        = surplus Penghasilan Komprehensif (penerimaan − biaya, tanpa 4.3 & 5.4)
  *     Koreksi aset neto periode lalu          = 4.3.04
  *     Aset neto dibebaskan dari pembatasan    = 4.3.01, 4.3.02, 4.3.03
  *     Penyesuaian langsung aset neto          = mutasi akun rek 3 (kredit − debet) pada periode
- *   Penghasilan Komprehensif Lain bersih      = 4.3 lainnya (4.3.05, 4.3.99) − biaya lain-lain 5.4
- *   Saldo akhir                               = jumlah di atas = aset neto di Posisi Keuangan pada tanggal akhir
+ *   Penghasilan Komprehensif Lain
+ *     Saldo awal                              = akumulasi PKL bersih seluruh jurnal sebelum tanggal awal
+ *     Penghasilan komprehensif lain bersih    = 4.3 lainnya (4.3.05, 4.3.99) − biaya lain-lain 5.4
+ *     Aset neto dibebaskan dari pembatasan    = 0 (belum ada akun sumber; seperti v1)
+ *   Saldo akhir                               = jumlah kedua bagian = aset neto di Posisi Keuangan pada tanggal akhir
+ *   (Akun 3.x.01 tidak memisahkan PKL, sehingga saldo awal PKL dihitung dari jurnal; PKL sebelum data jurnal pertama
+ *    tetap berada di saldo awal surplus akumulasian.)
  *
  * Kolom T.A berjalan mengikuti filter [awal, akhir]; kolom T.A lalu selalu seluruh T.A lalu (dari jurnal T.A lalu,
  * sehingga saldo akhirnya = saldo awal T.A berjalan).
@@ -34,8 +39,17 @@ class PerubahanAsetNeto
     'koreksi' => 'Koreksi Aset Neto Periode Lalu',
     'dibebaskan' => 'Aset Neto Yang Dibebaskan Dari Pembatasan',
     'langsung' => 'Penyesuaian Langsung Aset Neto',
-    'pkl' => 'Penghasilan Komprehensif Lain Bersih',
   ];
+
+  /** Baris bagian Penghasilan Komprehensif Lain (urutan tampil). */
+  public const BARIS_PKL = [
+    'pkl_awal' => 'Saldo Awal',
+    'pkl' => 'Penghasilan Komprehensif Lain Bersih',
+    'pkl_dibebaskan' => 'Aset Neto Yang Dibebaskan Dari Pembatasan',
+  ];
+
+  /** Akun 4.3 yang bukan PKL bersih (dibebaskan & koreksi, masuk surplus akumulasian). */
+  private const BUKAN_PKL = ['01', '02', '03', '04'];
 
   public function __construct(private PosisiKeuangan $posisi, private PenghasilanKomprehensif $pk)
   {
@@ -83,19 +97,25 @@ class PerubahanAsetNeto
     $ambil = fn (array $kode, string $k) => (float) collect($kode)->sum(fn ($c) => $lain[$c]->$k ?? 0);
 
     $langsung = $this->mutasiLangsung($tahun, $pos['awal'], $pos['akhir']);
+    $pklAwal = $this->pklSebelum($pos['awal']);
 
     $nilai = [];
     foreach (['tp' => '3.1.01', 'dp' => '3.2.01'] as $k => $kode) {
       $n = [
         'saldo_awal' => $saldo($kode, 'saldo_awal'),
+        'pkl_awal' => (float) ($pklAwal[$k] ?? 0),
         'surplus' => (float) $pk['surplus']->$k,
         'koreksi' => $ambil(['4.3.04'], $k),
         'dibebaskan' => $ambil(['4.3.01', '4.3.02', '4.3.03'], $k),
         'langsung' => (float) ($langsung[$k] ?? 0),
       ];
+      // saldo_awal = total aset neto awal; dipisah menjadi bagian surplus akumulasian & bagian PKL.
+      $n['saldo_awal_akum'] = $n['saldo_awal'] - $n['pkl_awal'];
       $n['pkl'] = (float) $pk['lain']->$k - $n['koreksi'] - $n['dibebaskan'];
-      $n['akumulasian'] = $n['saldo_awal'] + $n['surplus'] + $n['koreksi'] + $n['dibebaskan'] + $n['langsung'];
-      $n['saldo_akhir'] = $n['akumulasian'] + $n['pkl'];
+      $n['pkl_dibebaskan'] = 0.0;
+      $n['akumulasian'] = $n['saldo_awal_akum'] + $n['surplus'] + $n['koreksi'] + $n['dibebaskan'] + $n['langsung'];
+      $n['pkl_akhir'] = $n['pkl_awal'] + $n['pkl'] + $n['pkl_dibebaskan'];
+      $n['saldo_akhir'] = $n['akumulasian'] + $n['pkl_akhir'];
       // Pemeriksaan: harus sama dengan aset neto di Posisi Keuangan pada tanggal akhir.
       $n['posisi_akhir'] = $saldo($kode, 'saldo');
       $n['selisih'] = $n['saldo_akhir'] - $n['posisi_akhir'];
@@ -105,6 +125,34 @@ class PerubahanAsetNeto
 
     return ['awal' => $pos['awal'], 'akhir' => $pos['akhir'], 'seluruhTa' => $pos['awal'] === $pAwal && $pos['akhir'] === $pAkhir,
       'nilai' => $nilai, 'seimbang' => abs($nilai['tp']['selisih']) < 0.5 && abs($nilai['dp']['selisih']) < 0.5];
+  }
+
+  /**
+   * Akumulasi PKL bersih per kelompok dari seluruh jurnal (semua T.A, tanpa TB) sebelum $awal:
+   * 4.3 kecuali 4.3.01–4.3.04 (kredit − debet) − 5.4 (debet − kredit).
+   */
+  private function pklSebelum(string $awal): array
+  {
+    return DB::table('ueu_tbl_jurnal_spm as j')
+      ->join('ueu_tbl_sumberdana as d', 'd.id', '=', 'j.id_sumber')
+      ->join('ueu_tbl_rek6 as r6', 'r6.idrek6', '=', 'j.idrek6')
+      ->join('ueu_tbl_rek5 as r5', 'r5.idrek5', '=', 'r6.idrek5')
+      ->join('ueu_tbl_rek4 as r4', 'r4.idrek4', '=', 'r5.idrek4')
+      ->join('ueu_tbl_rek3 as r3', 'r3.idrek3', '=', 'r4.idrek3')
+      ->join('ueu_tbl_rek2 as r2', 'r2.idrek2', '=', 'r3.idrek2')
+      ->join('ueu_tbl_rek1 as r1', 'r1.idrek1', '=', 'r2.idrek1')
+      ->where('j.ket', '!=', 'TB')->where('j.tgl_trk', '<', $awal)
+      ->where(fn ($q) => $q
+        ->where(fn ($q) => $q->where('r1.koderek1', '4')->where('r2.koderek2', '3')->whereNotIn('r3.koderek3', self::BUKAN_PKL))
+        ->orWhere(fn ($q) => $q->where('r1.koderek1', '5')->where('r2.koderek2', '4')))
+      ->groupBy('d.kelompok')
+      ->selectRaw("d.kelompok, COALESCE(SUM(j.kredit), 0) - COALESCE(SUM(j.debet), 0) as net")
+      ->get()
+      ->reduce(function ($acc, $r) {
+        $acc[$r->kelompok === 'Pembatasan' ? 'dp' : 'tp'] += (float) $r->net;
+
+        return $acc;
+      }, ['tp' => 0.0, 'dp' => 0.0]);
   }
 
   /** Mutasi langsung akun aset neto (rek 3) pada periode, kredit − debet: 3.1 → tanpa, 3.2 → dengan pembatasan. */

@@ -40,6 +40,16 @@ class AkuntansiPerubahanAsetNetoTest extends TestCase
         $sebelumnya = $this->akuntansi(self::TAHUN - 1)->get('/akuntansi/perubahan-aset-neto')->viewData('ini');
         $this->assertEqualsWithDelta($sebelumnya['tp']['saldo_akhir'], $lalu['tp']['saldo_akhir'], 0.5);
         $this->assertEqualsWithDelta($sebelumnya['tp']['langsung'], $lalu['tp']['langsung'], 0.5);
+
+        // Saldo awal dipisah: bagian akumulasian + bagian PKL = total; saldo akhir PKL T.A lalu = saldo awal PKL berjalan.
+        foreach (['tp', 'dp'] as $k) {
+            $this->assertEqualsWithDelta($ini[$k]['saldo_awal'], $ini[$k]['saldo_awal_akum'] + $ini[$k]['pkl_awal'], 0.5);
+            $this->assertEqualsWithDelta($lalu[$k]['pkl_akhir'], $ini[$k]['pkl_awal'], 0.5);
+            $this->assertEqualsWithDelta($lalu[$k]['akumulasian'], $ini[$k]['saldo_awal_akum'], 0.5);
+        }
+        $r->assertSeeInOrder(['Surplus / (Defisit) Akumulasian', 'Saldo Awal', 'Surplus (Defisit) Tahun Berjalan', 'Koreksi Aset Neto Periode Lalu',
+            'Aset Neto Yang Dibebaskan Dari Pembatasan', 'Penghasilan Komprehensif Lain', 'Saldo Awal', 'Penghasilan Komprehensif Lain Bersih',
+            'Aset Neto Yang Dibebaskan Dari Pembatasan', 'Saldo Akhir Penghasilan Komprehensif Lain']);
     }
 
     public function test_report_tanggal(): void
