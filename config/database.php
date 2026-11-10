@@ -78,6 +78,22 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        // Database akademik (PostgreSQL, ummetro_pdptumm), hanya dibaca: sumber referensi prodi
+        // untuk laporan per prodi (php artisan simaku:sinkron-prodi).
+        'akademik' => [
+            'driver' => 'pgsql',
+            'host' => env('AKADEMIK_DB_HOST', '127.0.0.1'),
+            'port' => env('AKADEMIK_DB_PORT', '5432'),
+            'database' => env('AKADEMIK_DB_DATABASE', 'ummetro_pdptumm'),
+            'username' => env('AKADEMIK_DB_USERNAME', 'postgres'),
+            'password' => env('AKADEMIK_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DATABASE_URL'),

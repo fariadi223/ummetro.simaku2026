@@ -5,6 +5,7 @@ use App\Http\Controllers\admin\CoaController;
 use App\Http\Controllers\admin\MakController;
 use App\Http\Controllers\admin\PaguController;
 use App\Http\Controllers\admin\PeriodeController;
+use App\Http\Controllers\admin\RekeningLaporanUnitController;
 use App\Http\Controllers\admin\ReviewController;
 use App\Http\Controllers\admin\SumberdanaController;
 use App\Http\Controllers\admin\UnitController;
@@ -19,6 +20,8 @@ use App\Http\Controllers\akuntansi\NeracaPercobaanController;
 use App\Http\Controllers\akuntansi\PencairanController;
 use App\Http\Controllers\akuntansi\PenghasilanKomprehensifController;
 use App\Http\Controllers\akuntansi\PerubahanAsetNetoController;
+use App\Http\Controllers\akuntansi\LaporanUnitController;
+use App\Http\Controllers\akuntansi\PemetaanUnitController;
 use App\Http\Controllers\akuntansi\PeriodeController as AkuntansiPeriodeController;
 use App\Http\Controllers\akuntansi\PosisiKeuanganController;
 use App\Http\Controllers\akuntansi\PenyetoranController;
@@ -247,6 +250,8 @@ Route::middleware(['auth', 'role:akuntansi'])
 
     // Kertas Kerja > Saldo Anggaran Unit (padanan akuntansi/daftarsaldo_unit di v1).
     Route::get('saldo-unit', [SaldoUnitController::class, 'index'])->name('saldo-unit.index');
+    Route::get('saldo-unit/transaksi', [SaldoUnitController::class, 'transaksi'])->name('saldo-unit.transaksi');
+    Route::get('saldo-unit/excel', [SaldoUnitController::class, 'excel'])->name('saldo-unit.excel');
 
     // Kertas Kerja > Saldo Awal (padanan saldo/saldoawal & saldo/saldoawal/jurnalSaldo di v1).
     Route::get('saldo-awal', [SaldoAwalController::class, 'index'])->name('saldo-awal.index');
@@ -277,6 +282,22 @@ Route::middleware(['auth', 'role:akuntansi'])
 
     // Laporan Keuangan > Arus Kas (padanan report/aruskas/view di v1).
     Route::get('arus-kas', [ArusKasController::class, 'index'])->name('arus-kas.index');
+
+    // Kertas Kerja > Pemetaan Unit (baru di v2): unit kerja -> prodi (ueu_map_unit_prodi) untuk Laporan Keuangan Unit.
+    Route::prefix('pemetaan-unit')->name('pemetaan-unit.')->group(function () {
+      Route::get('/', [PemetaanUnitController::class, 'index'])->name('index');
+      Route::post('/', [PemetaanUnitController::class, 'simpan'])->name('simpan');
+      Route::delete('{id}', [PemetaanUnitController::class, 'hapus'])->name('hapus');
+    })->whereNumber('id');
+
+    // Laporan Keuangan > Laporan Keuangan Unit (baru di v2): unit terpetakan (ueu_map_unit_prodi) per induk FF.00.
+    Route::prefix('laporan-unit')->name('laporan-unit.')->group(function () {
+      Route::get('/', [LaporanUnitController::class, 'index'])->name('index');
+      Route::get('rinci', [LaporanUnitController::class, 'rinci'])->name('rinci');
+      Route::get('transaksi', [LaporanUnitController::class, 'transaksi'])->name('transaksi');
+      Route::get('excel', [LaporanUnitController::class, 'excel'])->name('excel');
+      Route::get('cetak', [LaporanUnitController::class, 'cetak'])->name('cetak');
+    });
 
     // Periode anggaran (session 'periode'), padanan akuntansi/periode di v1.
     Route::get('periode', [AkuntansiPeriodeController::class, 'index'])->name('periode');
@@ -342,6 +363,11 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('{level}/{id}/salin', [$ctl, 'salin'])->name('salin');
       })->where(['level' => "[1-{$max}]", 'id' => '[0-9]+']);
     }
+
+    // Rekening yang tampil/disembunyikan di Laporan Keuangan Unit (ueu_lap_unit_rek_nonaktif)
+    Route::get('rekening-laporan-unit', [RekeningLaporanUnitController::class, 'index'])->name('rekening-laporan-unit.index');
+    Route::post('rekening-laporan-unit/{idrek6}', [RekeningLaporanUnitController::class, 'atur'])
+      ->whereNumber('idrek6')->name('rekening-laporan-unit.atur');
 
     // Kode sumber dana (ueu_tbl_sumberdana)
     Route::prefix('sumberdana')->name('sumberdana.')->group(function () {

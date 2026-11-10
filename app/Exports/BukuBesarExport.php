@@ -26,6 +26,7 @@ class BukuBesarExport implements FromArray, WithHeadings, WithCustomStartCell, W
     private array $kepala,
     private array $baris,
     private array $angka,
+    private string $namaSheet = 'Buku Besar', // opsional; dipakai juga oleh laporan unit
   ) {
   }
 
@@ -46,7 +47,7 @@ class BukuBesarExport implements FromArray, WithHeadings, WithCustomStartCell, W
 
   public function title(): string
   {
-    return 'Buku Besar';
+    return $this->namaSheet;
   }
 
   public function columnFormats(): array
