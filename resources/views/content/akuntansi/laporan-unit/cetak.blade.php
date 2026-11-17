@@ -1,10 +1,10 @@
-{{-- Cetak Laporan Keuangan Unit (HTML siap print / "Simpan sebagai PDF"); ?rinci=1 menyertakan rincian rekening per induk. --}}
+{{-- Cetak Laporan Buku Besar Unit (HTML siap print / "Simpan sebagai PDF"); ?rinci=1 menyertakan rincian rekening per induk. --}}
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Laporan Keuangan Unit {{ $tahun }}/{{ $tahun + 1 }} | SIMAKU UM Metro</title>
+  <title>{{ $mode === 'aktivitas' ? 'Penghasilan Komprehensif Unit' : 'Laporan Buku Besar Unit' }} {{ $tahun }}/{{ $tahun + 1 }} | SIMAKU UM Metro</title>
   <link rel="shortcut icon" href="{{ asset('themes_v1/favicon.ico') }}">
   <style>
     @page { size: A4 landscape; margin: 10mm; }
@@ -50,7 +50,7 @@
   $rp = fn ($n) => \App\Services\LaporanUnit::rp($n);
   $rpk = fn ($n) => \App\Services\LaporanUnit::rp($n, true);
   $tglId = fn ($t) => \Illuminate\Support\Carbon::parse($t)->locale('id')->translatedFormat('d F Y');
-  $tot = ['n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0];
+  $tot = ['n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0, 'l' => 0.0];
   foreach ($grup as $g) {
     foreach (array_keys($tot) as $k) {
       $tot[$k] += $g[$k];
@@ -58,9 +58,13 @@
   }
   $q = ['tahun' => $tahun, 'awal' => $awal, 'akhir' => $akhir, 'mode' => $mode];
   $neraca = $mode === 'neraca';
+  $aktivitas = $mode === 'aktivitas';
+  $namaLap = $aktivitas ? 'Penghasilan Komprehensif Unit' : 'Laporan Buku Besar Unit';
+  $kolomNilai = \App\Services\LaporanUnit::kolom($mode);
+  $nilai = fn ($x) => \App\Services\LaporanUnit::nilai($mode, $x);
 @endphp
 <div class="bilah">
-  <span>Laporan Keuangan Unit</span>
+  <span>{{ $namaLap }}</span>
   <button type="button" class="utama" onclick="window.print()">Cetak / Simpan PDF</button>
   @if ($rinci)
     <a class="biasa" href="{{ route('akuntansi.laporan-unit.cetak', $q) }}">Tanpa rincian rekening</a>
@@ -80,35 +84,36 @@
   </div>
 
   <div class="judul">
-    <h2>Laporan Keuangan Unit</h2>
+    <h2>{{ $namaLap }}</h2>
     <p>Tahun Anggaran {{ $tahun }}/{{ $tahun + 1 }} · {{ $tglId($awal) }} s.d {{ $tglId($akhir) }}</p>
     @if ($neraca)<p>Rekening neraca: kepala 1 (aset/kas), 2 (kewajiban), 3 (aset neto)</p>@endif
+    @if ($aktivitas)<p>Surplus / (Defisit) = Pendapatan (4, kecuali 4.3) − Beban (5, kecuali 5.4); Penghasilan komprehensif lain = 4.3 − 5.4</p>@endif
   </div>
 
   <table class="data">
-    <thead><tr><th>Kode</th><th>Unit</th><th>Prodi</th><th>NPM</th><th>Trx</th><th>Debet (Rp)</th><th>Kredit (Rp)</th>@if ($neraca)<th>Mutasi Bersih D−K (Rp)</th>@else<th>Pendapatan (Rp)</th><th>Beban (Rp)</th><th>Surplus/(Defisit) (Rp)</th>@endif</tr></thead>
+    <thead><tr><th>Kode</th><th>Unit</th><th>Prodi</th><th>NPM</th><th>Trx</th>@foreach ($kolomNilai as [$jdl])<th>{{ $jdl }} (Rp)</th>@endforeach</tr></thead>
     <tbody>
       @forelse ($grup as $g)
         <tr class="induk">
           <td class="kode">{{ $g['kode_induk'] }}</td><td colspan="3">{{ $g['nama_induk'] }}</td>
-          <td class="rp">{{ number_format($g['n'], 0, ',', '.') }}</td><td class="rp">{{ $rp($g['d']) }}</td><td class="rp">{{ $rp($g['k']) }}</td>
-          @if ($neraca)<td class="rp">{{ $rp($g['d'] - $g['k']) }}</td>@else<td class="rp">{{ $rp($g['p']) }}</td><td class="rp">{{ $rp($g['b']) }}</td><td class="rp">{{ $rp($g['p'] - $g['b']) }}</td>@endif
+          <td class="rp">{{ number_format($g['n'], 0, ',', '.') }}</td>
+          @foreach ($nilai($g) as $v)<td class="rp">{{ $rp($v) }}</td>@endforeach
         </tr>
         @foreach ($g['unit'] as $u)
           <tr class="sub">
             <td class="kode">{{ $u->kode }}</td><td class="nama">{{ $u->nama }}</td>
             <td>{{ ($u->jenis === 'fakultas' ? ($u->nama_fakultas ?: 'Fakultas') : trim($u->kode_prodi . ' ' . $u->jenjang_didik . ' ' . $u->nama_prodi)) }}</td><td class="kode">{{ $u->kode_npm }}</td>
-            <td class="rp">{{ number_format($u->jml_transaksi, 0, ',', '.') }}</td><td class="rp">{{ $rp($u->total_debet) }}</td><td class="rp">{{ $rp($u->total_kredit) }}</td>
-            @if ($neraca)<td class="rp">{{ $rp($u->total_debet - $u->total_kredit) }}</td>@else<td class="rp">{{ $rp($u->pendapatan) }}</td><td class="rp">{{ $rp($u->beban) }}</td><td class="rp">{{ $rp($u->surplus) }}</td>@endif
+            <td class="rp">{{ number_format($u->jml_transaksi, 0, ',', '.') }}</td>
+            @foreach ($nilai($u) as $v)<td class="rp">{{ $rp($v) }}</td>@endforeach
           </tr>
         @endforeach
       @empty
-        <tr><td colspan="{{ $neraca ? 8 : 10 }}" style="text-align: center; color: #777;">Belum ada unit terpetakan.</td></tr>
+        <tr><td colspan="{{ 5 + count($kolomNilai) }}" style="text-align: center; color: #777;">Belum ada unit terpetakan.</td></tr>
       @endforelse
       <tr class="total">
         <td colspan="4" style="text-align: right;">TOTAL</td>
-        <td class="rp">{{ number_format($tot['n'], 0, ',', '.') }}</td><td class="rp">{{ $rp($tot['d']) }}</td><td class="rp">{{ $rp($tot['k']) }}</td>
-        @if ($neraca)<td class="rp">{{ $rp($tot['d'] - $tot['k']) }}</td>@else<td class="rp">{{ $rp($tot['p']) }}</td><td class="rp">{{ $rp($tot['b']) }}</td><td class="rp">{{ $rp($tot['p'] - $tot['b']) }}</td>@endif
+        <td class="rp">{{ number_format($tot['n'], 0, ',', '.') }}</td>
+        @foreach ($nilai($tot) as $v)<td class="rp">{{ $rp($v) }}</td>@endforeach
       </tr>
     </tbody>
   </table>

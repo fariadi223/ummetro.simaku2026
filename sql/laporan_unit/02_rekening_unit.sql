@@ -8,6 +8,7 @@
 --   SET @p_ff        = '01';          -- kelompok induk (2 digit pertama kode unit); NULL = semua kelompok
 --   SET @p_id_unit   = NULL;          -- satu unit; NULL = semua unit terpetakan di kelompok @p_ff
 --   SET @p_kepala    = NULL;          -- NULL = semua rekening; '1,2,3' = hanya kepala 1 (aset), 2 (kewajiban), 3 (aset neto)
+--   SET @p_selalu    = NULL;          -- idrek6 yang tetap ditampilkan walau nonaktif (layar: 569 Kas Universitas)
 --
 -- Cakupan sama dengan 01_rekap_unit.sql: hanya unit yang ada di ueu_map_unit_prodi.
 --   saldo_awal   = mutasi tahun @p_tahun dengan tgl_trk < @p_tgl_awal (arah saldo normal)
@@ -47,7 +48,8 @@ agg AS (
              AND (un.berlaku_dari IS NULL OR j.tgl_trk >= un.berlaku_dari)
   WHERE j.tahun = CONVERT(@p_tahun USING latin1)
     AND j.tgl_trk <= CAST(@p_tgl_akhir AS DATE)
-    AND NOT EXISTS (SELECT 1 FROM ueu_lap_unit_rek_nonaktif x WHERE x.idrek6 = j.idrek6)   -- rekening nonaktif (00_rekening_nonaktif.sql)
+    AND (j.idrek6 = @p_selalu                                                              -- tetap tampil walau nonaktif (Kas Universitas)
+         OR NOT EXISTS (SELECT 1 FROM ueu_lap_unit_rek_nonaktif x WHERE x.idrek6 = j.idrek6))   -- rekening nonaktif (00_rekening_nonaktif.sql)
   GROUP BY j.idrek6
 )
 SELECT a.idrek6,

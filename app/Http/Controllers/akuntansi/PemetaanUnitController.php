@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 /**
  * Kertas Kerja > Pemetaan Unit (/akuntansi/pemetaan-unit): unit kerja -> prodi atau fakultas (ueu_map_unit_prodi.jenis).
  * Unit pimpinan (Dekan / Wakil Dekan / Direktur, mis. 01.01) diusulkan ke fakultas induknya.
- * Satu form (modal) untuk tambah & ubah karena id_unit unik. Dipakai Laporan Keuangan Unit.
+ * Satu form (modal) untuk tambah & ubah karena id_unit unik. Dipakai Laporan Buku Besar Unit.
  */
 class PemetaanUnitController extends Controller
 {
@@ -75,6 +75,6 @@ class PemetaanUnitController extends Controller
     abort_unless($this->pu->siap(), 404);
     abort_unless($this->pu->hapus($id) > 0, 404);
 
-    return back()->with('status', 'Pemetaan dihapus; unit tersebut tidak lagi masuk Laporan Keuangan Unit.');
+    return back()->with('status', 'Pemetaan dihapus; unit tersebut tidak lagi masuk Laporan Buku Besar Unit.');
   }
 }

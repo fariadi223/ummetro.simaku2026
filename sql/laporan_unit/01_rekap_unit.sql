@@ -6,15 +6,20 @@
 --   SET @p_tgl_awal  = '2025-09-01';
 --   SET @p_tgl_akhir = '2026-08-31';
 --   SET @p_kepala    = NULL;          -- NULL = semua rekening; '1,2,3' = hanya kepala 1 (aset), 2 (kewajiban), 3 (aset neto)
+--   SET @p_selalu    = NULL;          -- idrek6 yang tetap dihitung walau nonaktif (aplikasi: 569 Kas Universitas)
 --
 -- Cakupan: hanya unit yang ada di ueu_map_unit_prodi (jenis prodi maupun fakultas, mis. 01.01 Wakil Dekan).
 -- Kelompok: unit induk berkode FF.00, dengan FF = 2 digit pertama kode unit.
 --   Contoh: 01.02, 01.03, 01.06 masuk ke 01.00 (Dekan FKIP).
 --   Transaksi unit induk sendiri hanya ikut jika unit induk itu juga ada di mapping.
 -- Mutasi periode @p_tgl_awal .. @p_tgl_akhir. Transaksi sebelum berlaku_dari mapping tidak dihitung.
---   pendapatan = Σ (kredit - debet) rekening kepala 4
---   beban      = Σ (debet - kredit) rekening kepala 5
---   surplus    = pendapatan - beban
+-- Susunan laporan penghasilan komprehensif (ISAK 35; sama dengan App\Services\PenghasilanKomprehensif):
+--   pendapatan = Σ (kredit - debet) rekening 4 kecuali 4.3 (Penghasilan Komprehensif Lain)
+--   beban      = Σ (debet - kredit) rekening 5 kecuali 5.4 (Biaya Lain-lain)
+--   surplus    = pendapatan - beban                                   (Surplus / (Defisit))
+--   pkl        = (kredit - debet 4.3) - (debet - kredit 5.4)          (Penghasilan Komprehensif Lain)
+--   komprehensif = surplus + pkl                                      (Total Penghasilan Komprehensif)
+--   Jurnal penutup (ket = 'TB') tidak dihitung di pendapatan/beban/pkl, tetap dihitung di debet/kredit.
 -- Dipakai juga oleh App\Services\LaporanUnit::rekap().
 -- Rekening di ueu_lap_unit_rek_nonaktif (Admin > Rekening Laporan Unit) tidak dihitung.
 -- =====================================================================
@@ -27,7 +32,7 @@ unit AS (
   JOIN ueu_tbl_unit u ON u.id_unit = m.id_unit
 ),
 rek AS (
-  SELECT r6.idrek6, r1.koderek1
+  SELECT r6.idrek6, r1.koderek1, CAST(r2.koderek2 AS CHAR) AS koderek2
   FROM ueu_tbl_rek6 r6
   LEFT JOIN ueu_tbl_rek5 r5 ON r5.idrek5 = r6.idrek5
   LEFT JOIN ueu_tbl_rek4 r4 ON r4.idrek4 = r5.idrek4
@@ -40,15 +45,20 @@ mutasi AS (
          COUNT(*)                                                                         AS n,
          SUM(COALESCE(j.debet, 0))                                                        AS d,
          SUM(COALESCE(j.kredit, 0))                                                       AS k,
-         SUM(CASE WHEN r.koderek1 = '4' THEN COALESCE(j.kredit, 0) - COALESCE(j.debet, 0) ELSE 0 END) AS pendapatan,
-         SUM(CASE WHEN r.koderek1 = '5' THEN COALESCE(j.debet, 0) - COALESCE(j.kredit, 0) ELSE 0 END) AS beban
+         SUM(CASE WHEN COALESCE(j.ket, '') <> 'TB' AND r.koderek1 = '4' AND r.koderek2 <> '3'
+                  THEN COALESCE(j.kredit, 0) - COALESCE(j.debet, 0) ELSE 0 END)           AS pendapatan,
+         SUM(CASE WHEN COALESCE(j.ket, '') <> 'TB' AND r.koderek1 = '5' AND r.koderek2 <> '4'
+                  THEN COALESCE(j.debet, 0) - COALESCE(j.kredit, 0) ELSE 0 END)           AS beban,
+         SUM(CASE WHEN COALESCE(j.ket, '') <> 'TB' AND ((r.koderek1 = '4' AND r.koderek2 = '3') OR (r.koderek1 = '5' AND r.koderek2 = '4'))
+                  THEN COALESCE(j.kredit, 0) - COALESCE(j.debet, 0) ELSE 0 END)           AS pkl     -- 4.3 (K-D) − 5.4 (D-K)
   FROM ueu_tbl_jurnal_spm j
   JOIN unit un ON un.id_unit = j.id_uk
              AND (un.berlaku_dari IS NULL OR j.tgl_trk >= un.berlaku_dari)
   LEFT JOIN rek r ON r.idrek6 = j.idrek6
   WHERE j.tahun = CONVERT(@p_tahun USING latin1)                 -- CONVERT agar indeks (tahun, bukti) terpakai
     AND j.tgl_trk BETWEEN CAST(@p_tgl_awal AS DATE) AND CAST(@p_tgl_akhir AS DATE)
-    AND NOT EXISTS (SELECT 1 FROM ueu_lap_unit_rek_nonaktif x WHERE x.idrek6 = j.idrek6)   -- rekening nonaktif (00_rekening_nonaktif.sql)
+    AND (j.idrek6 = @p_selalu                                                              -- tetap dihitung walau nonaktif (569 Kas Universitas)
+         OR NOT EXISTS (SELECT 1 FROM ueu_lap_unit_rek_nonaktif x WHERE x.idrek6 = j.idrek6))   -- rekening nonaktif (00_rekening_nonaktif.sql)
     AND (@p_kepala IS NULL OR FIND_IN_SET(r.koderek1, @p_kepala) > 0)                      -- mode: hanya kepala tertentu
   GROUP BY j.id_uk
 )
@@ -68,7 +78,9 @@ SELECT un.ff,
        COALESCE(mu.k, 0)                                    AS total_kredit,
        COALESCE(mu.pendapatan, 0)                           AS pendapatan,
        COALESCE(mu.beban, 0)                                AS beban,
-       COALESCE(mu.pendapatan, 0) - COALESCE(mu.beban, 0)   AS surplus
+       COALESCE(mu.pendapatan, 0) - COALESCE(mu.beban, 0)   AS surplus,
+       COALESCE(mu.pkl, 0)                                  AS pkl,
+       COALESCE(mu.pendapatan, 0) - COALESCE(mu.beban, 0) + COALESCE(mu.pkl, 0) AS komprehensif
 FROM unit un
 LEFT JOIN ueu_tbl_unit i   ON i.kode = CONCAT(un.ff, '.00')
 LEFT JOIN mutasi mu        ON mu.id_uk = un.id_unit

@@ -16,7 +16,7 @@ use Maatwebsite\Excel\Facades\Excel;
  *
  *   Saldo = Σ debet − Σ kredit ueu_tbl_jurnal_spm, idrek6 570 (Kas di Unit Kerja), per kodeunit
  *           (= kode unit induk "FF") pada T.A — sama dengan v1 bila periode dikosongkan.
- *   v2: dikelompokkan seperti Laporan Keuangan Unit (induk FF.00 + sub-unit per id_uk), filter periode,
+ *   v2: dikelompokkan seperti Laporan Buku Besar Unit (induk FF.00 + sub-unit per id_uk), filter periode,
  *       rincian transaksi dimuat saat baris diklik (transaksi), ekspor Excel.
  *   Rincian kredit: realisasi (idrinci > 0), setoran ("setor kas dari unit …"), kredit lainnya.
  *   Jurnal lama tanpa unit (kodeunit 0) masuk 00 (Rektorat) seperti v1, sebagai sub-baris "(Jurnal tanpa unit)".

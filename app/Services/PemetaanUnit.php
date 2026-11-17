@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
- * Pemetaan unit kerja -> prodi ATAU fakultas (ueu_map_unit_prodi.jenis), dipakai Laporan Keuangan Unit.
+ * Pemetaan unit kerja -> prodi ATAU fakultas (ueu_map_unit_prodi.jenis), dipakai Laporan Buku Besar Unit.
  *   jenis prodi    : id_sms -> ueu_ref_prodi   (mis. 01.02 Prodi Pendidikan Ekonomi)
  *   jenis fakultas : kode_fak -> ueu_ref_fakultas (mis. 01.01 Wakil Dekan II FKIP)
  * Hanya menulis ke ueu_map_unit_prodi; tabel lama tidak diubah.

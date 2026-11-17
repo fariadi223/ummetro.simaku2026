@@ -1,4 +1,4 @@
-{{-- Admin > Rekening Laporan Unit: aktif/nonaktifkan rekening yang tampil di Laporan Keuangan Unit. --}}
+{{-- Admin > Rekening Laporan Unit: aktif/nonaktifkan rekening yang tampil di Laporan Buku Besar Unit. --}}
 @extends('layouts/layoutMaster')
 
 @section('title', 'Rekening Laporan Unit')
@@ -19,7 +19,7 @@
     <div class="pg-header-icon"><i class="ti ti-eye-off"></i></div>
     <div class="flex-grow-1" style="min-width: 0;">
       <h4 class="mb-1">Rekening Laporan Unit</h4>
-      <p class="pg-header-sub mb-0">Atur rekening yang ditampilkan di Laporan Keuangan Unit (akuntansi). Rekening nonaktif tidak dihitung di rekap, rincian, maupun transaksi.</p>
+      <p class="pg-header-sub mb-0">Atur rekening yang ditampilkan di Laporan Buku Besar Unit (akuntansi). Rekening nonaktif tidak dihitung di rekap, rincian, maupun transaksi.</p>
     </div>
   </div>
   <div class="d-flex flex-wrap gap-2 mt-3">
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Saat menyembunyikan, minta keterangan singkat (opsional).
   document.querySelectorAll('.form-atur').forEach(f => f.addEventListener('submit', function (e) {
     if (f.elements.aktif.value === '0') {
-      const ket = prompt('Sembunyikan ' + f.dataset.label + ' dari Laporan Keuangan Unit?\nKeterangan (opsional):', '');
+      const ket = prompt('Sembunyikan ' + f.dataset.label + ' dari Laporan Buku Besar Unit?\nKeterangan (opsional):', '');
       if (ket === null) { e.preventDefault(); f.querySelector('.form-check-input').checked = true; return; }
       f.elements.keterangan.value = ket;
     }

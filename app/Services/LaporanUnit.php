@@ -39,29 +39,77 @@ class LaporanUnit
   /**
    * Rekap per unit terpetakan (01_rekap_unit.sql), urut FF lalu kode unit.
    * $kepala = daftar kepala rekening dipisah koma (mis. '1,2,3'), null = semua rekening.
+   * $selalu = idrek6 yang tetap dihitung walau dinonaktifkan admin (mis. 569 Kas Universitas).
    */
-  public function rekap(int $tahun, string $awal, string $akhir, ?string $kepala = null): array
+  public function rekap(int $tahun, string $awal, string $akhir, ?string $kepala = null, ?int $selalu = null): array
   {
-    return $this->jalankan('01_rekap_unit.sql', $tahun, $awal, $akhir, ['p_kepala' => $kepala]);
+    return $this->jalankan('01_rekap_unit.sql', $tahun, $awal, $akhir, ['p_kepala' => $kepala, 'p_selalu' => $selalu]);
   }
 
   /**
    * Neraca saldo per rekening (02_rekening_unit.sql) untuk satu kelompok ($ff, 2 digit)
    * atau satu unit ($idUnit). Keduanya null = semua unit terpetakan.
+   * $selalu = idrek6 yang tetap ditampilkan walau dinonaktifkan admin (mis. 569 Kas Universitas).
    */
-  public function rekening(int $tahun, string $awal, string $akhir, ?string $ff = null, ?int $idUnit = null, ?string $kepala = null): array
+  public function rekening(int $tahun, string $awal, string $akhir, ?string $ff = null, ?int $idUnit = null, ?string $kepala = null, ?int $selalu = null): array
   {
-    return $this->jalankan('02_rekening_unit.sql', $tahun, $awal, $akhir, ['p_ff' => $ff, 'p_id_unit' => $idUnit, 'p_kepala' => $kepala]);
+    return $this->jalankan('02_rekening_unit.sql', $tahun, $awal, $akhir,
+      ['p_ff' => $ff, 'p_id_unit' => $idUnit, 'p_kepala' => $kepala, 'p_selalu' => $selalu]);
   }
 
   /**
    * Rincian transaksi satu rekening (03_transaksi_unit.sql) untuk satu kelompok / satu unit,
    * dengan baris "Saldo awal" dan saldo berjalan. $batas = jumlah baris maksimum.
    */
-  public function transaksi(int $tahun, string $awal, string $akhir, ?string $ff, ?int $idUnit, int $idrek6, int $batas, ?string $kepala = null): array
+  public function transaksi(int $tahun, string $awal, string $akhir, ?string $ff, ?int $idUnit, int $idrek6, int $batas, ?string $kepala = null, ?int $selalu = null): array
   {
     return $this->jalankan('03_transaksi_unit.sql', $tahun, $awal, $akhir,
-      ['p_ff' => $ff, 'p_id_unit' => $idUnit, 'p_idrek6' => $idrek6, 'p_kepala' => $kepala], $batas);
+      ['p_ff' => $ff, 'p_id_unit' => $idUnit, 'p_idrek6' => $idrek6, 'p_kepala' => $kepala, 'p_selalu' => $selalu], $batas);
+  }
+
+  /**
+   * Rekap transfer dari Kas Universitas (kredit 569) per unit terpetakan (04_transfer_univ_rekap.sql).
+   * Tidak terpengaruh rekening nonaktif: 569 memang disembunyikan dari laporan utama.
+   */
+  public function transferRekap(int $tahun, string $awal, string $akhir): array
+  {
+    return $this->jalankan('04_transfer_univ_rekap.sql', $tahun, $awal, $akhir);
+  }
+
+  /** Jurnal transfer dari Kas Universitas satu kelompok / satu unit (05_transfer_univ_jurnal.sql). */
+  public function transferJurnal(int $tahun, string $awal, string $akhir, ?string $ff, ?int $idUnit, int $batas): array
+  {
+    return $this->jalankan('05_transfer_univ_jurnal.sql', $tahun, $awal, $akhir, ['p_ff' => $ff, 'p_id_unit' => $idUnit], $batas);
+  }
+
+  /**
+   * Kolom nilai per mode tampilan: [judul, merah bila negatif].
+   *   semua     : debet, kredit
+   *   neraca    : debet, kredit, mutasi bersih
+   *   aktivitas : pendapatan, beban, surplus/(defisit), penghasilan komprehensif lain, total (ISAK 35)
+   */
+  public static function kolom(string $mode): array
+  {
+    return match ($mode) {
+      'neraca' => [['Debet', false], ['Kredit', false], ['Mutasi bersih D−K', true]],
+      'aktivitas' => [['Pendapatan', false], ['Beban', false], ['Surplus / (Defisit)', true],
+        ['Penghasilan Kompr. Lain', true], ['Total Penghasilan Kompr.', true]],
+      default => [['Debet', false], ['Kredit', false]],
+    };
+  }
+
+  /** Nilai sesuai kolom(): $x = baris unit (objek SQL) atau subtotal kelompok/total (array d,k,p,b,l). */
+  public static function nilai(string $mode, object|array $x): array
+  {
+    $x = is_object($x)
+      ? ['d' => (float) $x->total_debet, 'k' => (float) $x->total_kredit, 'p' => (float) $x->pendapatan, 'b' => (float) $x->beban, 'l' => (float) $x->pkl]
+      : $x;
+
+    return match ($mode) {
+      'neraca' => [$x['d'], $x['k'], $x['d'] - $x['k']],
+      'aktivitas' => [$x['p'], $x['b'], $x['p'] - $x['b'], $x['l'], $x['p'] - $x['b'] + $x['l']],
+      default => [$x['d'], $x['k']],
+    };
   }
 
   /** Format rupiah tanpa desimal, negatif dalam kurung. */

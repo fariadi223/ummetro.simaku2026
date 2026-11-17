@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 /**
  * Admin > Rekening Laporan Unit (/admin/rekening-laporan-unit):
- * aktif/nonaktifkan rekening yang tampil di Laporan Keuangan Unit (mis. Kas Universitas disembunyikan).
+ * aktif/nonaktifkan rekening yang tampil di Laporan Buku Besar Unit (mis. Kas Universitas disembunyikan).
  */
 class RekeningLaporanUnitController extends Controller
 {
@@ -42,6 +42,6 @@ class RekeningLaporanUnitController extends Controller
 
     $this->rl->atur($idrek6, $aktif, $v['keterangan'] ?? null, $request->user()?->username);
 
-    return back()->with('status', "{$akun->kode} {$akun->namarek6} " . ($aktif ? 'ditampilkan kembali' : 'disembunyikan') . ' di Laporan Keuangan Unit.');
+    return back()->with('status', "{$akun->kode} {$akun->namarek6} " . ($aktif ? 'ditampilkan kembali' : 'disembunyikan') . ' di Laporan Buku Besar Unit.');
   }
 }

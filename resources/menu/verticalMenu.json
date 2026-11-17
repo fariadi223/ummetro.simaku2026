@@ -252,7 +252,8 @@
         "akuntansi.arus-kas",
         "akuntansi.buku-besar",
         "akuntansi.neraca-percobaan",
-        "akuntansi.laporan-unit"
+        "akuntansi.laporan-unit",
+        "akuntansi.laporan-unit.aktivitas"
       ],
       "role": [
         "akuntansi"
@@ -314,9 +315,18 @@
         },
         {
           "url": "akuntansi/laporan-unit",
-          "name": "Laporan Keuangan Unit",
+          "name": "Laporan Buku Besar Unit",
           "icon": "menu-icon tf-icons ti ti-building-community",
           "slug": "akuntansi.laporan-unit",
+          "role": [
+            "akuntansi"
+          ]
+        },
+        {
+          "url": "akuntansi/laporan-unit/aktivitas",
+          "name": "Penghasilan Komprehensif Unit",
+          "icon": "menu-icon tf-icons ti ti-chart-line",
+          "slug": "akuntansi.laporan-unit.aktivitas",
           "role": [
             "akuntansi"
           ]

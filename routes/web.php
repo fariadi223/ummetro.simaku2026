@@ -283,18 +283,20 @@ Route::middleware(['auth', 'role:akuntansi'])
     // Laporan Keuangan > Arus Kas (padanan report/aruskas/view di v1).
     Route::get('arus-kas', [ArusKasController::class, 'index'])->name('arus-kas.index');
 
-    // Kertas Kerja > Pemetaan Unit (baru di v2): unit kerja -> prodi (ueu_map_unit_prodi) untuk Laporan Keuangan Unit.
+    // Kertas Kerja > Pemetaan Unit (baru di v2): unit kerja -> prodi (ueu_map_unit_prodi) untuk Laporan Buku Besar Unit.
     Route::prefix('pemetaan-unit')->name('pemetaan-unit.')->group(function () {
       Route::get('/', [PemetaanUnitController::class, 'index'])->name('index');
       Route::post('/', [PemetaanUnitController::class, 'simpan'])->name('simpan');
       Route::delete('{id}', [PemetaanUnitController::class, 'hapus'])->name('hapus');
     })->whereNumber('id');
 
-    // Laporan Keuangan > Laporan Keuangan Unit (baru di v2): unit terpetakan (ueu_map_unit_prodi) per induk FF.00.
+    // Laporan Keuangan > Laporan Buku Besar Unit (baru di v2): unit terpetakan (ueu_map_unit_prodi) per induk FF.00.
     Route::prefix('laporan-unit')->name('laporan-unit.')->group(function () {
       Route::get('/', [LaporanUnitController::class, 'index'])->name('index');
+      Route::get('aktivitas', [LaporanUnitController::class, 'aktivitas'])->name('aktivitas');
       Route::get('rinci', [LaporanUnitController::class, 'rinci'])->name('rinci');
       Route::get('transaksi', [LaporanUnitController::class, 'transaksi'])->name('transaksi');
+      Route::get('transfer', [LaporanUnitController::class, 'transfer'])->name('transfer');
       Route::get('excel', [LaporanUnitController::class, 'excel'])->name('excel');
       Route::get('cetak', [LaporanUnitController::class, 'cetak'])->name('cetak');
     });
@@ -364,7 +366,7 @@ Route::middleware(['auth', 'role:admin'])
       })->where(['level' => "[1-{$max}]", 'id' => '[0-9]+']);
     }
 
-    // Rekening yang tampil/disembunyikan di Laporan Keuangan Unit (ueu_lap_unit_rek_nonaktif)
+    // Rekening yang tampil/disembunyikan di Laporan Buku Besar Unit (ueu_lap_unit_rek_nonaktif)
     Route::get('rekening-laporan-unit', [RekeningLaporanUnitController::class, 'index'])->name('rekening-laporan-unit.index');
     Route::post('rekening-laporan-unit/{idrek6}', [RekeningLaporanUnitController::class, 'atur'])
       ->whereNumber('idrek6')->name('rekening-laporan-unit.atur');

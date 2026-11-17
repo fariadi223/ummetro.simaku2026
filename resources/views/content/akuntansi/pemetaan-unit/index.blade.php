@@ -24,7 +24,7 @@
     <div class="pg-header-icon"><i class="ti ti-arrows-exchange"></i></div>
     <div class="flex-grow-1" style="min-width: 0;">
       <h4 class="mb-1">Pemetaan Unit</h4>
-      <p class="pg-header-sub mb-0">Unit kerja → prodi. Unit yang terpetakan masuk ke Laporan Keuangan Unit (dikelompokkan ke induk FF.00).</p>
+      <p class="pg-header-sub mb-0">Unit kerja → prodi. Unit yang terpetakan masuk ke Laporan Buku Besar Unit (dikelompokkan ke induk FF.00).</p>
     </div>
     <button type="button" class="btn btn-primary btn-isi"><i class="ti ti-plus me-1"></i>Tambah pemetaan</button>
     <a class="btn btn-label-secondary" href="{{ route('akuntansi.laporan-unit.index') }}"><i class="ti ti-report-analytics me-1"></i>Laporan Unit</a>
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.form-hapus').forEach(f => f.addEventListener('submit', function (e) {
     e.preventDefault();
     Swal.fire({ icon: 'warning', title: 'Hapus pemetaan?', showCancelButton: true, buttonsStyling: false,
-      html: '<b>' + esc(f.dataset.label) + '</b><br>Unit ini tidak lagi masuk Laporan Keuangan Unit.',
+      html: '<b>' + esc(f.dataset.label) + '</b><br>Unit ini tidak lagi masuk Laporan Buku Besar Unit.',
       confirmButtonText: 'Ya, hapus', cancelButtonText: 'Batal',
       customClass: { confirmButton: 'btn btn-danger me-2', cancelButton: 'btn btn-label-secondary' } })
       .then(r => { if (r.isConfirmed) f.submit(); });

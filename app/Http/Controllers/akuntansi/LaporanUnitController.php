@@ -12,11 +12,14 @@ use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
- * Laporan Keuangan > Laporan Keuangan Unit (/akuntansi/laporan-unit).
+ * Laporan Keuangan > Laporan Buku Besar Unit (/akuntansi/laporan-unit) dan
+ * Laporan Keuangan > Penghasilan Komprehensif Unit (/akuntansi/laporan-unit/aktivitas, mode 'aktivitas').
+ * Keduanya memakai tampilan, rincian, Excel & cetak yang sama; kolom nilai dari LaporanUnit::kolom().
  * Unit di ueu_map_unit_prodi dikelompokkan ke induk FF.00 (01.02, 01.03 -> 01.00).
  *   index : rekap per unit + subtotal induk; klik baris untuk rincian rekening (AJAX).
  *   rinci : JSON neraca saldo per rekening untuk satu unit (?id_unit=) atau satu induk (?ff=).
  *   transaksi : JSON transaksi satu rekening (?idrek6=) dari rinci di atas, dimuat saat diklik.
+ *   transfer : JSON jurnal transfer dari Kas Universitas (kredit 569) satu unit / induk.
  *   excel : rekap (dan rincian rekening per induk) ke .xlsx.
  *   cetak : HTML siap cetak / simpan PDF.
  */
@@ -26,7 +29,14 @@ class LaporanUnitController extends Controller
   public const MODE = [
     'semua' => null,       // semua rekening: pendapatan, beban, surplus/(defisit)
     'neraca' => '1,2,3',   // hanya rekening neraca: 1 aset (kas/bank), 2 kewajiban, 3 aset neto
+    'aktivitas' => '4,5',  // halaman Penghasilan Komprehensif Unit: pendapatan, beban, surplus/(defisit) (ISAK 35)
   ];
+
+  /**
+   * Kas Universitas (1.1.01.01.01.01): transfer dari universitas. Walau dinonaktifkan di Admin >
+   * Rekening Laporan Unit, tetap dihitung di rekap (debet/kredit, saldo unit), rincian, Excel & cetak.
+   */
+  private const KAS_UNIV = PencairanController::KAS_UNIV;
 
   /** Batas baris rincian transaksi per rekening (selebihnya lihat Buku Besar). */
   private const BATAS_TRANSAKSI = 1000;
@@ -41,11 +51,58 @@ class LaporanUnitController extends Controller
       return view('content.akuntansi.laporan-unit.belum-siap');
     }
     $f = $this->filter($request);
+    if ($f['mode'] === 'aktivitas') {
+      return redirect()->route('akuntansi.laporan-unit.aktivitas', $request->except('mode'));
+    }
 
-    return view('content.akuntansi.laporan-unit.index', $f + [
-      'grup' => $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala'])),
+    return $this->tampil($f, [
+      'transfer' => $this->kelompokTransfer($this->lu->transferRekap($f['tahun'], $f['awal'], $f['akhir'])),
+    ]);
+  }
+
+  /** Halaman terpisah: Penghasilan Komprehensif Unit (pendapatan, beban, surplus/(defisit), ISAK 35). */
+  public function aktivitas(Request $request)
+  {
+    if (!$this->lu->siap()) {
+      return view('content.akuntansi.laporan-unit.belum-siap');
+    }
+
+    return $this->tampil($this->filter($request, 'aktivitas'), ['transfer' => []]);
+  }
+
+  private function tampil(array $f, array $lain)
+  {
+    return view('content.akuntansi.laporan-unit.index', $f + $lain + [
+      'grup' => $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala'], self::KAS_UNIV)),
       'daftarTahun' => $this->lu->daftarTahun(),
       'rekNonaktif' => $this->lu->rekeningNonaktif(),
+    ]);
+  }
+
+  /** JSON jurnal transfer dari Kas Universitas; tepat satu dari id_unit atau ff. */
+  public function transfer(Request $request)
+  {
+    abort_unless($this->lu->siap(), 404);
+    $v = $request->validate([
+      'id_unit' => ['nullable', 'integer', 'min:1', 'required_without:ff'],
+      'ff' => ['nullable', 'regex:/^\d{2}$/', 'required_without:id_unit'],
+    ]);
+    $f = $this->filter($request);
+    $idUnit = isset($v['id_unit']) ? (int) $v['id_unit'] : null;
+    $baris = $this->lu->transferJurnal($f['tahun'], $f['awal'], $f['akhir'], $idUnit ? null : $v['ff'], $idUnit,
+      self::BATAS_TRANSAKSI + 1);
+
+    return response()->json([
+      'terpotong' => count($baris) > self::BATAS_TRANSAKSI,
+      'batas' => self::BATAS_TRANSAKSI,
+      'baris' => array_map(fn ($b) => [
+        'tanggal' => $b->tanggal,
+        'bukti' => (string) $b->bukti,
+        'kode_unit' => (string) $b->kode_unit,
+        'kegiatan' => (string) $b->kegiatan,
+        'uraian' => (string) $b->uraian,
+        'nilai' => (float) $b->nilai,
+      ], array_slice($baris, 0, self::BATAS_TRANSAKSI)),
     ]);
   }
 
@@ -59,7 +116,7 @@ class LaporanUnitController extends Controller
     ]);
     $f = $this->filter($request);
     $idUnit = isset($v['id_unit']) ? (int) $v['id_unit'] : null;
-    $baris = $this->lu->rekening($f['tahun'], $f['awal'], $f['akhir'], $idUnit ? null : $v['ff'], $idUnit, $f['kepala']);
+    $baris = $this->lu->rekening($f['tahun'], $f['awal'], $f['akhir'], $idUnit ? null : $v['ff'], $idUnit, $f['kepala'], self::KAS_UNIV);
 
     return response()->json(['baris' => array_map(fn ($b) => [
       'idrek6' => (int) $b->idrek6,
@@ -71,6 +128,7 @@ class LaporanUnitController extends Controller
       'total_debet' => (float) $b->total_debet,
       'total_kredit' => (float) $b->total_kredit,
       'saldo_akhir' => (float) $b->saldo_akhir,
+      'kas_univ' => (int) $b->idrek6 === self::KAS_UNIV,   // ditandai di layar
     ], $baris)]);
   }
 
@@ -89,7 +147,7 @@ class LaporanUnitController extends Controller
     $f = $this->filter($request);
     $idUnit = isset($v['id_unit']) ? (int) $v['id_unit'] : null;
     $baris = $this->lu->transaksi($f['tahun'], $f['awal'], $f['akhir'], $idUnit ? null : $v['ff'], $idUnit,
-      (int) $v['idrek6'], self::BATAS_TRANSAKSI + 1, $f['kepala']);
+      (int) $v['idrek6'], self::BATAS_TRANSAKSI + 1, $f['kepala'], self::KAS_UNIV);
     $terpotong = count($baris) > self::BATAS_TRANSAKSI;
 
     return response()->json([
@@ -112,43 +170,43 @@ class LaporanUnitController extends Controller
   {
     abort_unless($this->lu->siap(), 404);
     $f = $this->filter($request);
-    $grup = $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala']));
-    $neraca = $f['mode'] === 'neraca';
-    // Kolom nilai: mode neraca = debet, kredit, mutasi bersih; mode semua = + pendapatan, beban, surplus.
-    $nilai = fn ($d, $k, $p, $b) => $neraca ? [$d, $k, $d - $k] : [$d, $k, $p, $b, $p - $b];
+    $grup = $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala'], self::KAS_UNIV));
+    $mode = $f['mode'];
+    $nilai = fn ($x) => LaporanUnit::nilai($mode, $x);
 
     $isi = [];
-    $tot = ['n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0];
+    $tot = ['n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0, 'l' => 0.0];
     foreach ($grup as $g) {
-      $isi[] = [$g['kode_induk'], $g['nama_induk'], '', '', $g['n'], ...$nilai($g['d'], $g['k'], $g['p'], $g['b'])];
+      $isi[] = [$g['kode_induk'], $g['nama_induk'], '', '', $g['n'], ...$nilai($g)];
       foreach ($g['unit'] as $u) {
         $isi[] = ['   ' . $u->kode, '   ' . $u->nama, ($u->jenis === 'fakultas' ? ($u->nama_fakultas ?: 'Fakultas') : trim($u->kode_prodi . ' ' . $u->jenjang_didik . ' ' . $u->nama_prodi)), $u->kode_npm,
-          (int) $u->jml_transaksi, ...$nilai((float) $u->total_debet, (float) $u->total_kredit, (float) $u->pendapatan, (float) $u->beban)];
+          (int) $u->jml_transaksi, ...$nilai($u)];
       }
-      foreach (['n', 'd', 'k', 'p', 'b'] as $k) {
+      foreach (array_keys($tot) as $k) {
         $tot[$k] += $g[$k];
       }
     }
-    $isi[] = ['TOTAL', '', '', '', $tot['n'], ...$nilai($tot['d'], $tot['k'], $tot['p'], $tot['b'])];
+    $isi[] = ['TOTAL', '', '', '', $tot['n'], ...$nilai($tot)];
 
-    $kepala = ['KODE', 'UNIT', 'PRODI', 'KODE NPM', 'TRX', 'DEBET', 'KREDIT',
-      ...($neraca ? ['MUTASI BERSIH (D-K)'] : ['PENDAPATAN', 'BEBAN', 'SURPLUS/(DEFISIT)'])];
+    $kolom = LaporanUnit::kolom($mode);
+    $kepala = ['KODE', 'UNIT', 'PRODI', 'KODE NPM', 'TRX', ...array_map(fn ($c) => mb_strtoupper($c[0]), $kolom)];
+    $huruf = array_slice(['F', 'G', 'H', 'I', 'J'], 0, count($kolom));
+    $nama = ['semua' => 'LAP-BUKU-BESAR-UNIT-', 'neraca' => 'LAP-BUKU-BESAR-UNIT-NERACA-', 'aktivitas' => 'LAP-PENGHASILAN-KOMPREHENSIF-UNIT-'][$mode];
 
-    return Excel::download(new BukuBesarExport($this->judul($f), $kepala,
-      $isi, $neraca ? ['F', 'G', 'H'] : ['F', 'G', 'H', 'I', 'J'], 'Laporan Unit'),
-      'LAP-KEUANGAN-UNIT-' . ($neraca ? 'NERACA-' : '') . str_replace('-', '', $f['awal']) . '-' . str_replace('-', '', $f['akhir']) . '.xlsx');
+    return Excel::download(new BukuBesarExport($this->judul($f), $kepala, $isi, $huruf, 'Laporan Unit'),
+      $nama . str_replace('-', '', $f['awal']) . '-' . str_replace('-', '', $f['akhir']) . '.xlsx');
   }
 
   public function cetak(Request $request)
   {
     abort_unless($this->lu->siap(), 404);
     $f = $this->filter($request);
-    $grup = $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala']));
+    $grup = $this->kelompok($this->lu->rekap($f['tahun'], $f['awal'], $f['akhir'], $f['kepala'], self::KAS_UNIV));
     // Rincian rekening per induk ikut dicetak bila ?rinci=1.
     $rinci = [];
     if ($request->boolean('rinci')) {
       foreach ($grup as $ff => $g) {
-        $rinci[$ff] = $this->lu->rekening($f['tahun'], $f['awal'], $f['akhir'], sprintf('%02d', (int) $ff), null, $f['kepala']);
+        $rinci[$ff] = $this->lu->rekening($f['tahun'], $f['awal'], $f['akhir'], sprintf('%02d', (int) $ff), null, $f['kepala'], self::KAS_UNIV);
       }
     }
 
@@ -161,7 +219,7 @@ class LaporanUnitController extends Controller
   }
 
   /**
-   * Kelompokkan baris rekap per FF: [ff => [kode_induk, nama_induk, unit[], n, d, k, p, b]].
+   * Kelompokkan baris rekap per FF: [ff => [kode_induk, nama_induk, unit[], n, d, k, p, b, l]] (l = penghasilan komprehensif lain).
    * Urutan dari SQL (FF, kode) dipertahankan.
    */
   private function kelompok(array $baris): array
@@ -169,20 +227,36 @@ class LaporanUnitController extends Controller
     $g = [];
     foreach ($baris as $b) {
       $ff = (string) $b->ff;
-      $g[$ff] ??= ['kode_induk' => $b->kode_induk, 'nama_induk' => $b->nama_induk, 'unit' => [], 'n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0];
+      $g[$ff] ??= ['kode_induk' => $b->kode_induk, 'nama_induk' => $b->nama_induk, 'unit' => [], 'n' => 0, 'd' => 0.0, 'k' => 0.0, 'p' => 0.0, 'b' => 0.0, 'l' => 0.0];
       $g[$ff]['unit'][] = $b;
       $g[$ff]['n'] += (int) $b->jml_transaksi;
       $g[$ff]['d'] += (float) $b->total_debet;
       $g[$ff]['k'] += (float) $b->total_kredit;
       $g[$ff]['p'] += (float) $b->pendapatan;
       $g[$ff]['b'] += (float) $b->beban;
+      $g[$ff]['l'] += (float) $b->pkl;
     }
 
     return $g;
   }
 
-  /** tahun, awal, akhir, mode & kepala (divalidasi; default T.A aktif, mode semua). */
-  private function filter(Request $request): array
+  /** Rekap transfer per FF: [ff => [kode_induk, nama_induk, unit[], n, nilai]]. */
+  private function kelompokTransfer(array $baris): array
+  {
+    $g = [];
+    foreach ($baris as $b) {
+      $ff = (string) $b->ff;
+      $g[$ff] ??= ['kode_induk' => $b->kode_induk, 'nama_induk' => $b->nama_induk, 'unit' => [], 'n' => 0, 'nilai' => 0.0];
+      $g[$ff]['unit'][] = $b;
+      $g[$ff]['n'] += (int) $b->jml;
+      $g[$ff]['nilai'] += (float) $b->nilai;
+    }
+
+    return $g;
+  }
+
+  /** tahun, awal, akhir, mode & kepala (divalidasi; default T.A aktif, mode semua). $paksa = mode tetap halaman. */
+  private function filter(Request $request, ?string $paksa = null): array
   {
     $v = $request->validate([
       'tahun' => ['nullable', 'integer', 'between:2000,2100'],
@@ -190,7 +264,7 @@ class LaporanUnitController extends Controller
       'akhir' => ['nullable', 'date_format:Y-m-d'],
       'mode' => ['nullable', 'in:' . implode(',', array_keys(self::MODE))],
     ]);
-    $mode = $v['mode'] ?? 'semua';
+    $mode = $paksa ?? $v['mode'] ?? 'semua';
     $tahun = (int) ($v['tahun'] ?? (session('periode') ?: Info::tahun(['penjurnalan' => 'open'])));
     [$pAwal, $pAkhir] = BukuBesar::periode($tahun);
     $awal = $v['awal'] ?? $pAwal;
@@ -209,7 +283,8 @@ class LaporanUnitController extends Controller
 
     return [
       'UNIVERSITAS MUHAMMADIYAH METRO',
-      'LAPORAN KEUANGAN UNIT' . ($f['mode'] === 'neraca' ? ' (REKENING NERACA: KEPALA 1, 2, 3)' : '') . ' · T.A ' . $f['tahun'] . '/' . ($f['tahun'] + 1),
+      ['semua' => 'LAPORAN BUKU BESAR UNIT', 'neraca' => 'LAPORAN BUKU BESAR UNIT (REKENING NERACA: KEPALA 1, 2, 3)',
+        'aktivitas' => 'LAPORAN PENGHASILAN KOMPREHENSIF UNIT'][$f['mode']] . ' · T.A ' . $f['tahun'] . '/' . ($f['tahun'] + 1),
       'Periode ' . $tgl($f['awal']) . ' s/d ' . $tgl($f['akhir']) . ' · unit terpetakan, dikelompokkan ke unit induk FF.00',
     ];
   }

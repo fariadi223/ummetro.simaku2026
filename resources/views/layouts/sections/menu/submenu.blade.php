@@ -1,5 +1,16 @@
 <ul class="menu-sub">
   @if (isset($menu))
+    @php
+      // Slug item daun paling spesifik yang cocok dengan route saat ini di antara saudara-saudaranya,
+      // agar 'akuntansi.laporan-unit' tidak ikut aktif pada 'akuntansi.laporan-unit.aktivitas'.
+      $routeSaatIni = (string) Route::currentRouteName();
+      $slugTerbaik = collect($menu)
+        ->filter(fn ($m) => !isset($m->submenu) && is_string($m->slug ?? null)
+          && ($routeSaatIni === $m->slug || str_starts_with($routeSaatIni, $m->slug . '.')))
+        ->map(fn ($m) => $m->slug)
+        ->sortByDesc(fn ($s) => strlen($s))
+        ->first();
+    @endphp
     @foreach ($menu as $submenu)
 
     {{-- sembunyikan submenu yang tidak sesuai role user --}}
@@ -13,9 +24,8 @@
       $active = $configData["layout"] === 'vertical' ? 'active open':'active';
       $currentRouteName =  (string) Route::currentRouteName();
 
-      // Aktif juga untuk route turunan, mis. slug 'admin.coa' pada 'admin.coa.show'.
-      if (!isset($submenu->submenu) && is_string($submenu->slug ?? null)
-          && ($currentRouteName === $submenu->slug || str_starts_with($currentRouteName, $submenu->slug . '.'))) {
+      // Aktif juga untuk route turunan, mis. slug 'admin.coa' pada 'admin.coa.show' (hanya slug terbaik di atas).
+      if (!isset($submenu->submenu) && is_string($submenu->slug ?? null) && $submenu->slug === $slugTerbaik) {
           $activeClass = 'active';
       }
       elseif (isset($submenu->submenu)) {

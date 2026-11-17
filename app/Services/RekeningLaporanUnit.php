@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Rekening yang ditampilkan / disembunyikan di Laporan Keuangan Unit.
+ * Rekening yang ditampilkan / disembunyikan di Laporan Buku Besar Unit.
  * Disembunyikan = ada baris di ueu_lap_unit_rek_nonaktif (sql/laporan_unit/00_rekening_nonaktif.sql).
  * Hanya menulis ke ueu_lap_unit_rek_nonaktif.
  */
