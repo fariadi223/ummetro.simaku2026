@@ -47,6 +47,10 @@ class DashboardController extends Controller
       return $this->kasir($user, app(RealisasiSpm::class));
     }
 
+    if ($user->hasAnyRole('review')) {
+      return $this->reviewer($user, app(\App\Services\ReviewKegiatan::class));
+    }
+
     return view('content.dashboard.dashboard-simaku', [
       'user' => $user,
       'unit' => $user->unit,
@@ -368,6 +372,49 @@ class DashboardController extends Controller
       // Antrian pembayaran: terlama disetujui lebih dulu.
       'antrian' => $belum->sortBy($tglSetuju)->values()->take(8),
       'terakhir' => $dibayar->sortByDesc(fn ($s) => $s->bayar->tgl_kasir . '|' . str_pad((string) $s->bayar->id_kasir, 10, '0', STR_PAD_LEFT))->values()->take(6),
+    ]);
+  }
+
+  /**
+   * Dashboard Reviewer (area /reviewer). v1 (Reviewer::index) hanya sambutan; di sini ringkasan klinik
+   * anggaran T.A sesi: unit yang ditetapkan, kegiatan yang belum dinilai, ajuan revisi dari unit
+   * (sudah diperbaiki, menunggu dinilai ulang), dan jadwal komite. Kriteria: lihat ReviewKegiatan::daftarUnit.
+   */
+  private function reviewer($user, \App\Services\ReviewKegiatan $review)
+  {
+    $tahun = (int) (session('periode') ?: Info::tahun(['aktif' => 'enable']));
+    $unit = $review->daftarUnit((int) $user->idlog, $tahun);
+    $info = Info::where('th_angg', $tahun)->first();
+
+    $tgl = function (?string $teks): ?Carbon {
+      try {
+        return $teks ? Carbon::parse($teks)->startOfDay() : null;
+      } catch (\Throwable) {
+        return null;
+      }
+    };
+    $akhirKomite = $tgl($info?->akhir_komite);
+
+    return view('content.dashboard.dashboard-reviewer', [
+      'user' => $user,
+      'tahun' => $tahun,
+      'unit' => $unit,
+      'ringkas' => [
+        'unit' => $unit->count(),
+        'kegiatan' => $unit->sum('kegiatan'),
+        'disetujui' => $unit->sum('disetujui'),
+        'direvisi' => $unit->sum('direvisi'),
+        'ajuan_revisi' => $unit->sum('ajuan_revisi'),
+        'belum' => $unit->sum('belum'),
+      ],
+      'komite' => [
+        'awal' => $tgl($info?->awal_komite),
+        'akhir' => $akhirKomite,
+        'sisa_hari' => $akhirKomite ? (int) Carbon::today()->diffInDays($akhirKomite, false) : null,
+      ],
+      // Unit yang perlu perhatian: ada ajuan revisi atau kegiatan belum dinilai.
+      'antrian' => $unit->filter(fn ($u) => $u->ajuan_revisi > 0 || $u->belum > 0)
+        ->sortByDesc(fn ($u) => $u->ajuan_revisi * 1000 + $u->belum)->values()->take(8),
     ]);
   }
 

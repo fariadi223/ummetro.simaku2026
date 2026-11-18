@@ -407,6 +407,31 @@
       ]
     },
     {
+      "url": "reviewer/unit",
+      "name": "Klinik Anggaran Unit",
+      "icon": "menu-icon tf-icons ti ti-stethoscope",
+      "slug": [
+        "reviewer.unit.index",
+        "reviewer.kegiatan.index",
+        "reviewer.kegiatan.create",
+        "reviewer.rinci.index",
+        "reviewer.rinci.create",
+        "reviewer.rinci.edit"
+      ],
+      "role": [
+        "review"
+      ]
+    },
+    {
+      "url": "reviewer/periode",
+      "name": "Periode Anggaran",
+      "icon": "menu-icon tf-icons ti ti-calendar",
+      "slug": "reviewer.periode",
+      "role": [
+        "review"
+      ]
+    },
+    {
       "url": "adminspm",
       "name": "Dashboard",
       "icon": "menu-icon tf-icons ti ti-smart-home",

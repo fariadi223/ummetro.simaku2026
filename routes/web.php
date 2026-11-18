@@ -34,6 +34,10 @@ use App\Http\Controllers\kasir\PeriodeController as KasirPeriodeController;
 use App\Http\Controllers\kasir\RealisasiSpmController;
 use App\Http\Controllers\otorisator\OtorisasiSpmController;
 use App\Http\Controllers\pages\DashboardController;
+use App\Http\Controllers\reviewer\KegiatanController as ReviewerKegiatanController;
+use App\Http\Controllers\reviewer\KlinikController;
+use App\Http\Controllers\reviewer\PeriodeController as ReviewerPeriodeController;
+use App\Http\Controllers\reviewer\RinciController as ReviewerRinciController;
 use App\Http\Controllers\unit\KegiatanController;
 use App\Http\Controllers\unit\KeluaranController;
 use App\Http\Controllers\unit\OtorisasiSppController;
@@ -158,6 +162,44 @@ Route::middleware(['auth', 'role:unit'])
     // Pengaturan > Periode Anggaran (padanan unit/periode di v1)
     Route::get('periode', [UnitPeriodeController::class, 'index'])->name('periode');
     Route::post('periode', [UnitPeriodeController::class, 'pilih'])->name('periode.pilih');
+  });
+
+/*
+| Reviewer / Klinik Anggaran (wewenang 'review', area /reviewer), padanan controller Reviewer v1.
+| Route berawalan kegiatan/{kode} hanya untuk unit yang ditetapkan ke reviewer (middleware reviewer.unit);
+| {kode} otomatis terisi di route() selama request tsb.
+*/
+Route::middleware(['auth', 'role:review'])
+  ->prefix('reviewer')
+  ->name('reviewer.')
+  ->group(function () {
+    Route::get('periode', [ReviewerPeriodeController::class, 'index'])->name('periode');
+    Route::post('periode', [ReviewerPeriodeController::class, 'pilih'])->name('periode.pilih');
+
+    // Klinik Anggaran Unit (padanan reviewer/unit & unit_tabel v1)
+    Route::get('unit', [KlinikController::class, 'index'])->name('unit.index');
+
+    Route::prefix('kegiatan/{kode}')->middleware('reviewer.unit')->group(function () {
+      // Review kegiatan unit (padanan reviewer/kegiatan/{kode} & review_simpan v1). ?mak=kode MAK1 memilih bidang.
+      Route::get('/', [KlinikController::class, 'kegiatan'])->name('kegiatan.index');
+      Route::post('review/{idkeg}', [KlinikController::class, 'simpan'])->whereNumber('idkeg')->name('kegiatan.review');
+
+      // Tambah kegiatan unit oleh reviewer (padanan reviewer/kegiatan/{id}/unit/{kode}/add v1)
+      Route::get('tambah', [ReviewerKegiatanController::class, 'create'])->name('kegiatan.create');
+      Route::post('tambah', [ReviewerKegiatanController::class, 'store'])->name('kegiatan.store');
+
+      // Edit rincian kegiatan unit oleh reviewer (padanan reviewer/kegiatan/{idkeg}/unit/{kode}/rinci v1)
+      Route::prefix('rinci/{idkeg}')->name('rinci.')->group(function () {
+        Route::get('/', [ReviewerRinciController::class, 'index'])->name('index');
+        Route::get('cetak', [ReviewerRinciController::class, 'cetak'])->name('cetak');
+        Route::post('surplus', [ReviewerRinciController::class, 'surplus'])->name('surplus');
+        Route::get('tambah/{jenis}', [ReviewerRinciController::class, 'create'])->name('create');
+        Route::post('{jenis}', [ReviewerRinciController::class, 'store'])->name('store');
+        Route::get('item/{idrinci}/ubah', [ReviewerRinciController::class, 'edit'])->name('edit');
+        Route::put('item/{idrinci}', [ReviewerRinciController::class, 'update'])->name('update');
+        Route::delete('item/{idrinci}', [ReviewerRinciController::class, 'destroy'])->name('destroy');
+      })->whereNumber(['idkeg', 'idrinci'])->where('jenis', 'pendapatan|belanja');
+    });
   });
 
 /*

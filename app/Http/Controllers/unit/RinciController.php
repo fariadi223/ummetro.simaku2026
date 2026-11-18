@@ -32,10 +32,13 @@ class RinciController extends Controller
 {
   public const JENIS = ['pendapatan' => 'Pendapatan', 'belanja' => 'Belanja'];
 
+  /** Awalan nama route (subclass reviewer memakai 'reviewer.'). */
+  protected string $ruteAwal = 'unit.';
+
   public function __construct(
-    private KomiteAnggaran $komite,
-    private StatusKegiatan $status,
-    private RincianAnggaran $anggaran,
+    protected KomiteAnggaran $komite,
+    protected StatusKegiatan $status,
+    protected RincianAnggaran $anggaran,
   ) {
   }
 
@@ -62,7 +65,8 @@ class RinciController extends Controller
       'rinci' => $rinci,
       'komite' => $komite,
       'review' => $review,
-      'bolehUbah' => $this->status->bolehUbah($komite, $review),
+      'bolehUbah' => $this->bolehUbah($unit, $tahun, $keg, $komite, $review),
+      'ruteAwal' => $this->ruteAwal,
       'pendapatan' => $pendapatan,
       'belanja' => $belanja,
       'pagu' => $this->infoPagu($unit, $tahun, $keg->idsumberdana),
@@ -94,7 +98,7 @@ class RinciController extends Controller
       'created_date' => now('Asia/Jakarta')->format('d-m-Y G:i:s'),
     ]);
 
-    return redirect()->route('unit.rinci.index', [$keg->idkeg, 'tab' => $jenis])
+    return redirect()->route($this->ruteAwal . 'rinci.index', [$keg->idkeg, 'tab' => $jenis])
       ->with('status', self::JENIS[$jenis] . " \"{$data['uraianrinci']}\" berhasil ditambahkan.");
   }
 
@@ -124,7 +128,7 @@ class RinciController extends Controller
       'modified_date' => now('Asia/Jakarta')->format('d-m-Y G:i:s'),
     ]);
 
-    return redirect()->route('unit.rinci.index', [$keg->idkeg, 'tab' => $jenis])
+    return redirect()->route($this->ruteAwal . 'rinci.index', [$keg->idkeg, 'tab' => $jenis])
       ->with('status', self::JENIS[$jenis] . " \"{$data['uraianrinci']}\" berhasil diperbarui.");
   }
 
@@ -143,7 +147,7 @@ class RinciController extends Controller
 
     $item->delete();
 
-    return redirect()->route('unit.rinci.index', [$keg->idkeg, 'tab' => $jenis])
+    return redirect()->route($this->ruteAwal . 'rinci.index', [$keg->idkeg, 'tab' => $jenis])
       ->with('status', self::JENIS[$jenis] . " \"{$item->uraianrinci}\" berhasil dihapus.");
   }
 
@@ -171,7 +175,7 @@ class RinciController extends Controller
       $r->volume = Rinci::volume($r);
     })->groupBy(fn ($r) => $r->koderek1 == '4' ? 'pendapatan' : 'belanja');
 
-    return view('content.unit.rinci.cetak', compact('unit', 'tahun', 'keg', 'rinci'));
+    return view('content.unit.rinci.cetak', compact('unit', 'tahun', 'keg', 'rinci') + ['ruteAwal' => $this->ruteAwal]);
   }
 
   // ---------------------------------------------------------------------------
@@ -187,6 +191,7 @@ class RinciController extends Controller
       'rekening' => $this->rekening($jenis)->get(),
       'pagu' => $jenis === 'belanja' ? $this->infoPagu($unit, $tahun, $keg->idsumberdana) : null,
       'komite' => $this->komite->status($unit, $tahun),
+      'ruteAwal' => $this->ruteAwal,
     ]);
   }
 
@@ -305,7 +310,8 @@ class RinciController extends Controller
         DB::raw("CONCAT_WS('.', r1.koderek1, r2.koderek2, r3.koderek3, r4.koderek4, r5.koderek5, r6.koderek6) as kode_rek"));
   }
 
-  private function konteks(): array
+  /** Unit & T.A yang dikerjakan (subclass reviewer: unit yang sedang di-review). */
+  protected function konteks(): array
   {
     $unit = Auth::user()->unit;
     abort_unless($unit, 404, 'Akun ini tidak terhubung ke unit kerja.');
@@ -345,10 +351,19 @@ class RinciController extends Controller
     return $kode1 == '4' ? 'pendapatan' : 'belanja';
   }
 
+  /** Aturan boleh ubah rincian (lihat StatusKegiatan); reviewer selalu boleh, seperti v1. */
+  protected function bolehUbah(Unit $unit, int $tahun, Kegiatan $keg, ?array $komite = null, ?object $review = null): bool
+  {
+    $komite ??= $this->komite->status($unit, $tahun);
+    $review ??= $this->status->review($unit, $tahun, [$keg->idkeg])[$keg->idkeg];
+
+    return $this->status->bolehUbah($komite, $review);
+  }
+
   private function pastikanBolehUbah(Unit $unit, int $tahun, Kegiatan $keg): void
   {
-    if (!$this->status->bolehUbahKegiatan($unit, $tahun, $keg)) {
-      abort(redirect()->route('unit.rinci.index', $keg->idkeg)
+    if (!$this->bolehUbah($unit, $tahun, $keg)) {
+      abort(redirect()->route($this->ruteAwal . 'rinci.index', $keg->idkeg)
         ->with('error', 'Rincian tidak dapat diubah: jadwal komite sudah ditutup dan kegiatan tidak sedang direvisi.'));
     }
   }

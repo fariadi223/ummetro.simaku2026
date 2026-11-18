@@ -27,7 +27,10 @@ use Illuminate\Validation\Rule;
  */
 class KegiatanController extends Controller
 {
-  public function __construct(private KomiteAnggaran $komite, private RincianAnggaran $rinci, private StatusKegiatan $status)
+  /** Awalan nama route (subclass reviewer memakai 'reviewer.'). */
+  protected string $ruteAwal = 'unit.';
+
+  public function __construct(protected KomiteAnggaran $komite, protected RincianAnggaran $rinci, protected StatusKegiatan $status)
   {
   }
 
@@ -70,8 +73,8 @@ class KegiatanController extends Controller
     [$unit, $tahun] = $this->konteks();
     $aktif = $this->bidangAktif($this->bidang(), $request->query('mak'));
 
-    if (!$this->komite->status($unit, $tahun)['dibuka']) {
-      return redirect()->route('unit.kegiatan.index', ['mak' => $aktif->kodemak1])
+    if (!$this->bolehTambah($unit, $tahun)) {
+      return redirect()->route($this->ruteAwal . 'kegiatan.index', ['mak' => $aktif->kodemak1])
         ->with('error', 'Jadwal komite sudah ditutup; kegiatan baru tidak dapat ditambahkan.');
     }
 
@@ -82,7 +85,7 @@ class KegiatanController extends Controller
   {
     [$unit, $tahun] = $this->konteks();
     $aktif = $this->bidangAktif($this->bidang(), null, (int) $request->input('idmak1'));
-    abort_unless($this->komite->status($unit, $tahun)['dibuka'], 403, 'Jadwal komite sudah ditutup.');
+    abort_unless($this->bolehTambah($unit, $tahun), 403, 'Jadwal komite sudah ditutup.');
 
     $data = $this->validasi($request, $aktif, $tahun);
 
@@ -95,7 +98,7 @@ class KegiatanController extends Controller
       'created_date' => now('Asia/Jakarta')->format('d-m-Y G:i:s'),
     ]);
 
-    return redirect()->route('unit.kegiatan.index', ['mak' => $aktif->kodemak1])
+    return redirect()->route($this->ruteAwal . 'kegiatan.index', ['mak' => $aktif->kodemak1])
       ->with('status', "Kegiatan \"{$data['uraiankeg']}\" berhasil ditambahkan.");
   }
 
@@ -192,7 +195,15 @@ class KegiatanController extends Controller
       'pagu' => Pagu::where('tahun', (string) $tahun)->orderBy('id_pagu')->get(),
       'opsiIndikator' => Kegiatan::opsiIndikator(),
       'komite' => $this->komite->status($unit, $tahun),
+      'ruteAwal' => $this->ruteAwal,
+      'bolehTambah' => $this->bolehTambah($unit, $tahun),
     ]);
+  }
+
+  /** Kegiatan baru hanya saat komite dibuka (subclass reviewer: selalu boleh, seperti v1). */
+  protected function bolehTambah(Unit $unit, int $tahun): bool
+  {
+    return $this->komite->status($unit, $tahun)['dibuka'];
   }
 
   private function validasi(Request $request, object $aktif, int $tahun): array
@@ -238,7 +249,7 @@ class KegiatanController extends Controller
   }
 
   /** Unit & tahun anggaran dari sesi login (padanan $this->idunit / $this->tahun v1). */
-  private function konteks(): array
+  protected function konteks(): array
   {
     $unit = Auth::user()->unit;
     abort_unless($unit, 404, 'Akun ini tidak terhubung ke unit kerja.');
@@ -247,12 +258,12 @@ class KegiatanController extends Controller
   }
 
   /** MAK level 1 = bidang / tab (urut kode). */
-  private function bidang()
+  protected function bidang()
   {
     return DB::table('ueu_tbl_mak1')->orderBy('kodemak1')->get(['idmak1', 'kodemak1', 'namamak1']);
   }
 
-  private function bidangAktif($bidang, $kode = null, ?int $id = null): object
+  protected function bidangAktif($bidang, $kode = null, ?int $id = null): object
   {
     $pilih = $id ? $bidang->firstWhere('idmak1', $id) : ($kode !== null ? $bidang->firstWhere('kodemak1', (int) $kode) : null);
     $pilih ??= $bidang->first();

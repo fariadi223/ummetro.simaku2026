@@ -24,7 +24,7 @@
 
 @php
   $label = ucfirst($jenis);
-  $aksi = $item ? route('unit.rinci.update', [$keg->idkeg, $item->idrinci]) : route('unit.rinci.store', [$keg->idkeg, $jenis]);
+  $aksi = $item ? route($ruteAwal . 'rinci.update', [$keg->idkeg, $item->idrinci]) : route($ruteAwal . 'rinci.store', [$keg->idkeg, $jenis]);
   $nilai = fn ($k, $d = '') => old($k, $item ? $item->{$k} : $d);
   // qty 0 pada data lama = kosong
   $qty = fn ($i) => old("qty{$i}", $item && (float) $item->{"qty{$i}"} != 0 ? rtrim(rtrim(number_format((float) $item->{"qty{$i}"}, 4, '.', ''), '0'), '.') : '');
@@ -120,7 +120,7 @@
     </div>
   </div>
   <div class="card-footer d-flex justify-content-end gap-2 border-top">
-    <a href="{{ route('unit.rinci.index', [$keg->idkeg, 'tab' => $jenis]) }}" class="btn btn-label-secondary">Kembali</a>
+    <a href="{{ route($ruteAwal . 'rinci.index', [$keg->idkeg, 'tab' => $jenis]) }}" class="btn btn-label-secondary">Kembali</a>
     <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i> Simpan</button>
   </div>
 </form>

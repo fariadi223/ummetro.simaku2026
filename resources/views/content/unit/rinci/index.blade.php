@@ -42,8 +42,8 @@
       <div class="pg-header-sub">{{ $unit->kode }} · {{ $unit->nama }} · T.A {{ $tahun }}/{{ $tahun + 1 }}</div>
     </div>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ route('unit.kegiatan.index', ['mak' => $keg->kodemak1]) }}" class="btn btn-light"><i class="ti ti-arrow-left me-1"></i> Kembali</a>
-      <a href="{{ route('unit.rinci.cetak', $keg->idkeg) }}" target="_blank" rel="noopener" class="btn btn-light"><i class="ti ti-printer me-1"></i> Print Preview</a>
+      <a href="{{ route($ruteAwal . 'kegiatan.index', ['mak' => $keg->kodemak1]) }}" class="btn btn-light"><i class="ti ti-arrow-left me-1"></i> Kembali</a>
+      <a href="{{ route($ruteAwal . 'rinci.cetak', $keg->idkeg) }}" target="_blank" rel="noopener" class="btn btn-light"><i class="ti ti-printer me-1"></i> Print Preview</a>
     </div>
   </div>
   <div class="d-flex flex-wrap gap-2 mt-3">
@@ -114,8 +114,8 @@
     </ul>
     @if ($bolehUbah)
       <div class="d-flex gap-2">
-        <a href="{{ route('unit.rinci.create', [$keg->idkeg, 'pendapatan']) }}" class="btn btn-label-success"><i class="ti ti-plus me-1"></i> Pendapatan</a>
-        <a href="{{ route('unit.rinci.create', [$keg->idkeg, 'belanja']) }}" class="btn btn-danger"><i class="ti ti-plus me-1"></i> Belanja</a>
+        <a href="{{ route($ruteAwal . 'rinci.create', [$keg->idkeg, 'pendapatan']) }}" class="btn btn-label-success"><i class="ti ti-plus me-1"></i> Pendapatan</a>
+        <a href="{{ route($ruteAwal . 'rinci.create', [$keg->idkeg, 'belanja']) }}" class="btn btn-danger"><i class="ti ti-plus me-1"></i> Belanja</a>
       </div>
     @endif
   </div>
@@ -151,8 +151,8 @@
                   <td class="text-end rp fw-semibold">{{ $rp($r->jumlah) }}</td>
                   @if ($bolehUbah)
                     <td class="text-end text-nowrap">
-                      <a href="{{ route('unit.rinci.edit', [$keg->idkeg, $r->idrinci]) }}" class="btn btn-sm btn-icon btn-text-warning rounded-pill" title="Ubah"><i class="ti ti-pencil"></i></a>
-                      <form method="POST" action="{{ route('unit.rinci.destroy', [$keg->idkeg, $r->idrinci]) }}" class="d-inline form-hapus" data-label="{{ $r->uraianrinci }}">
+                      <a href="{{ route($ruteAwal . 'rinci.edit', [$keg->idkeg, $r->idrinci]) }}" class="btn btn-sm btn-icon btn-text-warning rounded-pill" title="Ubah"><i class="ti ti-pencil"></i></a>
+                      <form method="POST" action="{{ route($ruteAwal . 'rinci.destroy', [$keg->idkeg, $r->idrinci]) }}" class="d-inline form-hapus" data-label="{{ $r->uraianrinci }}">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-sm btn-icon btn-text-danger rounded-pill" title="Hapus"><i class="ti ti-trash"></i></button>
@@ -182,7 +182,7 @@
   {{-- Surplus (v1): pilihan ditambahkan pada pagu unit atau tidak --}}
   @if ($selisih > 0)
     <div class="card-footer border-top">
-      <form method="POST" action="{{ route('unit.rinci.surplus', $keg->idkeg) }}" class="d-flex flex-wrap align-items-center gap-3">
+      <form method="POST" action="{{ route($ruteAwal . 'rinci.surplus', $keg->idkeg) }}" class="d-flex flex-wrap align-items-center gap-3">
         @csrf
         <div class="fw-semibold"><i class="ti ti-info-circle text-info me-1"></i>Terjadi surplus {{ $rp($selisih) }}. Tambahkan pada pagu unit?</div>
         <div class="form-check mb-0">

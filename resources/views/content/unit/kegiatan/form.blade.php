@@ -24,8 +24,8 @@
 @php
   $nilai = fn ($kolom, $bawaan = '') => old($kolom, $keg ? $keg->{$kolom} : $bawaan);
   $indikatorDipilih = old('indikator', $keg ? $keg->daftar_indikator : []);
-  $aksi = $keg ? route('unit.kegiatan.update', $keg->idkeg) : route('unit.kegiatan.store');
-  $kembali = route('unit.kegiatan.index', ['mak' => $aktif->kodemak1]);
+  $aksi = $keg ? route($ruteAwal . 'kegiatan.update', $keg->idkeg) : route($ruteAwal . 'kegiatan.store');
+  $kembali = route($ruteAwal . 'kegiatan.index', ['mak' => $aktif->kodemak1]);
   $rujukanUraian = $rujukan->pluck('rujukan_uraian', 'id');
 @endphp
 
